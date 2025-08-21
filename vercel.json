@@ -1,18 +1,6 @@
 {
   "name": "qiming-star-platform",
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/"
-    }
-  ],
   "env": {
     "NEXT_PUBLIC_APP_NAME": "启明星平台",
     "NEXT_PUBLIC_APP_VERSION": "1.0.0",
