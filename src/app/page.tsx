@@ -7,8 +7,12 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // 重定向到登录页面
-    router.push('/login')
+    // 使用 replace 而不是 push 来避免历史记录问题
+    const timer = setTimeout(() => {
+      router.replace('/login')
+    }, 100)
+    
+    return () => clearTimeout(timer)
   }, [router])
 
   return (

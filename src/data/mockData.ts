@@ -1,6 +1,34 @@
 // 启明星平台 - 模拟数据中心
 
-// 用户信息
+// 用户认证账户（用于登录）
+export const mockAuthUsers = [
+  {
+    id: '1',
+    username: 'student',
+    password: 'student', // 实际项目中应该加密存储
+    name: '张三',
+    role: 'student' as const,
+    avatar: '/avatars/student.jpg'
+  },
+  {
+    id: '2', 
+    username: 'teacher',
+    password: 'teacher',
+    name: '李老师',
+    role: 'teacher' as const,
+    avatar: '/avatars/teacher.jpg'
+  },
+  {
+    id: '3',
+    username: 'admin', 
+    password: 'admin',
+    name: '王管理员',
+    role: 'admin' as const,
+    avatar: '/avatars/admin.jpg'
+  }
+]
+
+// 用户详细信息
 export const mockUsers = {
   student: {
     id: 'STU001',
@@ -177,33 +205,172 @@ export const mockRecommendedResources = [
   }
 ]
 
-// AI对话历史
-export const mockChatHistory = [
+// AI对话历史记录会话
+export const mockChatSessions = [
   {
-    id: 1,
-    type: 'user',
-    content: '我想了解一下数据结构中的树结构',
-    timestamp: '2024-01-20 14:30:00'
+    id: 'session_1',
+    title: '数据结构学习讨论',
+    lastMessage: '需要我详细解释删除操作的代码实现吗？',
+    timestamp: '2024-01-20 14:35:20',
+    messageCount: 4,
+    category: '学习辅导',
+    messages: [
+      {
+        id: 1,
+        type: 'user',
+        content: '我想了解一下数据结构中的树结构',
+        timestamp: '2024-01-20 14:30:00'
+      },
+      {
+        id: 2,
+        type: 'ai',
+        content: '树结构是一种重要的非线性数据结构，它由节点组成，具有以下特点：\n\n1. **层次结构**：树有明确的层次关系\n2. **根节点**：树的顶部节点，没有父节点\n3. **叶子节点**：没有子节点的节点\n4. **子树**：每个节点都可以看作一个子树的根\n\n常见的树结构包括：\n- 二叉树\n- 平衡二叉树（AVL树）\n- 红黑树\n- B树和B+树\n\n你想深入了解哪种树结构呢？',
+        timestamp: '2024-01-20 14:30:15'
+      },
+      {
+        id: 3,
+        type: 'user',
+        content: '二叉搜索树的插入和删除操作怎么实现？',
+        timestamp: '2024-01-20 14:35:00'
+      },
+      {
+        id: 4,
+        type: 'ai',
+        content: '二叉搜索树的插入和删除操作如下：\n\n**插入操作：**\n```python\ndef insert(root, val):\n    if not root:\n        return TreeNode(val)\n    if val < root.val:\n        root.left = insert(root.left, val)\n    else:\n        root.right = insert(root.right, val)\n    return root\n```\n\n**删除操作：**\n删除节点有三种情况：\n1. 删除叶子节点：直接删除\n2. 删除只有一个子节点的节点：用子节点替换\n3. 删除有两个子节点的节点：用中序后继替换\n\n需要我详细解释删除操作的代码实现吗？',
+        timestamp: '2024-01-20 14:35:20'
+      }
+    ]
   },
   {
-    id: 2,
-    type: 'ai',
-    content: '树结构是一种重要的非线性数据结构，它由节点组成，具有以下特点：\n\n1. **层次结构**：树有明确的层次关系\n2. **根节点**：树的顶部节点，没有父节点\n3. **叶子节点**：没有子节点的节点\n4. **子树**：每个节点都可以看作一个子树的根\n\n常见的树结构包括：\n- 二叉树\n- 平衡二叉树（AVL树）\n- 红黑树\n- B树和B+树\n\n你想深入了解哪种树结构呢？',
-    timestamp: '2024-01-20 14:30:15'
+    id: 'session_2',
+    title: 'React开发问题咨询',
+    lastMessage: '这样可以有效避免不必要的重新渲染，提升应用性能。',
+    timestamp: '2024-01-19 16:20:30',
+    messageCount: 6,
+    category: '技术咨询',
+    messages: [
+      {
+        id: 5,
+        type: 'user',
+        content: 'React中的useCallback和useMemo有什么区别？',
+        timestamp: '2024-01-19 16:15:00'
+      },
+      {
+        id: 6,
+        type: 'ai',
+        content: 'useCallback和useMemo都是React的性能优化Hook，但用途不同：\n\n**useCallback**：\n- 用于缓存函数\n- 返回一个记忆化的回调函数\n- 只有依赖项改变时才会返回新的函数\n\n**useMemo**：\n- 用于缓存计算结果\n- 返回一个记忆化的值\n- 只有依赖项改变时才会重新计算\n\n使用场景示例我可以详细说明。',
+        timestamp: '2024-01-19 16:15:45'
+      },
+      {
+        id: 7,
+        type: 'user',
+        content: '能给个具体的代码示例吗？',
+        timestamp: '2024-01-19 16:18:00'
+      },
+      {
+        id: 8,
+        type: 'ai',
+        content: '当然可以！这里是具体示例：\n\n```jsx\n// useCallback示例\nconst MyComponent = ({ items }) => {\n  const [count, setCount] = useState(0);\n  \n  // 缓存函数，避免子组件不必要的重渲染\n  const handleClick = useCallback((id) => {\n    console.log("Clicked:", id);\n  }, []); // 空依赖数组，函数永远不变\n  \n  return (\n    <div>\n      <button onClick={() => setCount(count + 1)}>\n        Count: {count}\n      </button>\n      {items.map(item => (\n        <ChildComponent \n          key={item.id} \n          item={item} \n          onClick={handleClick} \n        />\n      ))}\n    </div>\n  );\n};\n\n// useMemo示例\nconst ExpensiveComponent = ({ data }) => {\n  // 缓存计算结果\n  const expensiveValue = useMemo(() => {\n    return data.reduce((sum, item) => sum + item.value, 0);\n  }, [data]); // 只有data改变时才重新计算\n  \n  return <div>Total: {expensiveValue}</div>;\n};\n```',
+        timestamp: '2024-01-19 16:19:15'
+      },
+      {
+        id: 9,
+        type: 'user',
+        content: '什么时候应该使用这些优化？',
+        timestamp: '2024-01-19 16:20:00'
+      },
+      {
+        id: 10,
+        type: 'ai',
+        content: '使用这些优化的时机：\n\n**何时使用useCallback：**\n- 将函数传递给子组件作为props\n- 函数作为其他Hook的依赖项\n- 避免在每次渲染时创建新函数\n\n**何时使用useMemo：**\n- 计算成本较高的操作\n- 复杂的数据转换\n- 避免在每次渲染时重复计算\n\n**注意事项：**\n- 不要过度优化，简单计算不需要useMemo\n- 依赖数组要准确，避免闭包陷阱\n- 性能分析后再决定是否需要优化\n\n这样可以有效避免不必要的重新渲染，提升应用性能。',
+        timestamp: '2024-01-19 16:20:30'
+      }
+    ]
   },
   {
-    id: 3,
-    type: 'user',
-    content: '二叉搜索树的插入和删除操作怎么实现？',
-    timestamp: '2024-01-20 14:35:00'
+    id: 'session_3',
+    title: 'OKR目标制定指导',
+    lastMessage: '记住，好的OKR应该是具有挑战性但可实现的。',
+    timestamp: '2024-01-18 10:45:00',
+    messageCount: 8,
+    category: '目标规划',
+    messages: [
+      {
+        id: 11,
+        type: 'user',
+        content: '我想制定一个关于提升编程能力的OKR，应该怎么设定？',
+        timestamp: '2024-01-18 10:30:00'
+      },
+      {
+        id: 12,
+        type: 'ai',
+        content: '制定编程能力提升的OKR是个很好的想法！让我帮你构建一个SMART的目标：\n\n**目标(Objective)：** 在3个月内显著提升编程能力\n\n**关键结果(Key Results)可以包括：**\n1. 完成200道LeetCode算法题（当前：50道）\n2. 独立完成2个完整的项目（前端+后端）\n3. 学习并掌握一门新的编程语言或框架\n4. 代码review通过率达到95%以上\n\n你觉得这个方向如何？我们可以根据你的具体情况调整。',
+        timestamp: '2024-01-18 10:32:00'
+      },
+      {
+        id: 13,
+        type: 'user',
+        content: '这个目标会不会太ambitious了？我现在还是初学者',
+        timestamp: '2024-01-18 10:35:00'
+      },
+      {
+        id: 14,
+        type: 'ai',
+        content: '你说得对！让我们调整为更适合初学者的版本：\n\n**目标：** 建立扎实的编程基础（3个月）\n\n**关键结果：**\n1. 完成50道基础算法题（每周3-4道）\n2. 完成1个个人项目（如待办事项应用）\n3. 每周编程练习不少于10小时\n4. 通过在线课程学习一门语言基础（如Python或JavaScript）\n\n这样的目标更现实，也更容易跟踪进度。你觉得怎么样？',
+        timestamp: '2024-01-18 10:37:00'
+      },
+      {
+        id: 15,
+        type: 'user',
+        content: '好多了！那我应该如何跟踪这些进度呢？',
+        timestamp: '2024-01-18 10:40:00'
+      },
+      {
+        id: 16,
+        type: 'ai',
+        content: '跟踪进度的方法：\n\n**1. 每日记录：**\n- 今天完成了几道题？\n- 编程时间多长？\n- 遇到了什么问题？\n\n**2. 周度回顾：**\n- 本周目标完成情况\n- 学到的新知识点\n- 下周的重点计划\n\n**3. 使用工具：**\n- GitHub提交记录\n- LeetCode进度统计\n- 时间跟踪应用\n- 学习笔记\n\n**4. 里程碑庆祝：**\n- 每完成25道题庆祝一下\n- 项目每个阶段完成后总结\n\n记住，好的OKR应该是具有挑战性但可实现的。',
+        timestamp: '2024-01-18 10:45:00'
+      }
+    ]
   },
   {
-    id: 4,
-    type: 'ai',
-    content: '二叉搜索树的插入和删除操作如下：\n\n**插入操作：**\n```python\ndef insert(root, val):\n    if not root:\n        return TreeNode(val)\n    if val < root.val:\n        root.left = insert(root.left, val)\n    else:\n        root.right = insert(root.right, val)\n    return root\n```\n\n**删除操作：**\n删除节点有三种情况：\n1. 删除叶子节点：直接删除\n2. 删除只有一个子节点的节点：用子节点替换\n3. 删除有两个子节点的节点：用中序后继替换\n\n需要我详细解释删除操作的代码实现吗？',
-    timestamp: '2024-01-20 14:35:20'
+    id: 'session_4',
+    title: '学习方法优化建议',
+    lastMessage: '坚持这个方法，你会看到明显的进步！',
+    timestamp: '2024-01-17 14:20:00',
+    messageCount: 4,
+    category: '学习指导',
+    messages: [
+      {
+        id: 17,
+        type: 'user',
+        content: '我感觉学习效率不高，总是容易分心，有什么好的学习方法推荐吗？',
+        timestamp: '2024-01-17 14:10:00'
+      },
+      {
+        id: 18,
+        type: 'ai',
+        content: '学习效率问题很常见，我推荐几个实用的方法：\n\n**1. 番茄工作法：**\n- 25分钟专注学习 + 5分钟休息\n- 4个番茄后休息15-30分钟\n- 期间完全专注，不碰手机\n\n**2. 费曼学习法：**\n- 学完后尝试教给别人\n- 用简单语言解释复杂概念\n- 发现不懂的地方重新学习\n\n**3. 环境优化：**\n- 固定学习地点\n- 移除干扰源\n- 准备好所需材料\n\n**4. 目标分解：**\n- 大目标分解为小任务\n- 每天设定具体可达成的目标\n\n你想先尝试哪种方法？',
+        timestamp: '2024-01-17 14:12:00'
+      },
+      {
+        id: 19,
+        type: 'user',
+        content: '番茄工作法听起来不错，但是25分钟会不会太短了？',
+        timestamp: '2024-01-17 14:15:00'
+      },
+      {
+        id: 20,
+        type: 'ai',
+        content: '25分钟确实可以根据个人情况调整！\n\n**个性化调整建议：**\n- 初学者：15-20分钟开始\n- 有基础：25-30分钟\n- 深度工作：45-90分钟\n\n**关键原则：**\n1. 时间内保持100%专注\n2. 休息时间不能省略\n3. 找到适合自己的节奏\n4. 逐步延长专注时间\n\n**实施建议：**\n- 第一周用20分钟适应\n- 感觉轻松后延长到25分钟\n- 根据学习内容调整时长\n- 复杂内容可以用更长时间\n\n坚持这个方法，你会看到明显的进步！',
+        timestamp: '2024-01-17 14:20:00'
+      }
+    ]
   }
 ]
+
+// 兼容性：保持原有的chatHistory格式
+export const mockChatHistory = mockChatSessions[0]?.messages || []
 
 // 教师数据
 export const mockTeacherData = {
@@ -508,6 +675,7 @@ export const mockData = {
   learningAnalytics: mockLearningAnalytics,
   recommendedResources: mockRecommendedResources,
   chatHistory: mockChatHistory,
+  chatSessions: mockChatSessions,
   teacherData: mockTeacherData,
   adminData: mockAdminData,
   systemStats: mockSystemStats

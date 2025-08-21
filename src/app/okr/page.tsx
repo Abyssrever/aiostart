@@ -12,10 +12,12 @@ import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Navigation from '@/components/Navigation'
+import FloatingAIAssistant from '@/components/FloatingAIAssistant'
 import { mockData } from '@/data/mockData'
 
 // 使用集中的mock数据
 const mockOKRs = mockData.okrs
+const mockChatSessions = mockData.chatSessions
 
 type OKR = {
   id?: number
@@ -33,6 +35,8 @@ type OKR = {
 }
 
 export default function OKRManagement() {
+  const [activeTab, setActiveTab] = useState<'management' | 'ai-history'>('management')
+  const [selectedSession, setSelectedSession] = useState<any>(null)
   const [okrs, setOkrs] = useState(mockOKRs)
   const [selectedOKR, setSelectedOKR] = useState<number | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -154,6 +158,34 @@ export default function OKRManagement() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* 功能标签页 */}
+        <div className="mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              {[
+                { id: 'management', label: 'OKR管理', icon: '🎯' },
+                { id: 'ai-history', label: 'AI历史记录', icon: '🤖' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as 'management' | 'ai-history')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
+                      ? 'border-purple-500 text-purple-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <span className="mr-2">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* OKR管理内容 */}
+        {activeTab === 'management' && (
+        <div>
         {/* 操作栏 */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex flex-wrap gap-3">
@@ -474,7 +506,140 @@ export default function OKRManagement() {
             </CardContent>
           </Card>
         )}
+        </div>
+        )}
+
+        {/* AI历史记录 */}
+        {activeTab === 'ai-history' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <span className="mr-2">🤖</span>
+                  AI对话历史记录
+                </CardTitle>
+                <CardDescription>
+                  查看你与AI助手的所有对话记录，回顾OKR制定过程中的问答
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {mockChatSessions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">🤖</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">暂无AI对话记录</h3>
+                    <p className="text-gray-600 mb-4">开始与AI助手对话，这里将显示你们的聊天历史</p>
+                    <Button className="bg-purple-600 hover:bg-purple-700">
+                      开始对话
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* 会话列表 */}
+                    <div className="lg:col-span-1">
+                      <h3 className="font-medium text-gray-900 mb-4">对话会话</h3>
+                      <div className="space-y-2">
+                        {mockChatSessions.map((session) => (
+                          <div
+                            key={session.id}
+                            onClick={() => setSelectedSession(session)}
+                            className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                              selectedSession?.id === session.id
+                                ? 'bg-purple-50 border-purple-200'
+                                : 'bg-white hover:bg-gray-50 border-gray-200'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-sm text-gray-900 truncate">
+                                {session.title}
+                              </h4>
+                              <span className="text-xs text-gray-500">
+                                {session.date}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 line-clamp-2">
+                              {session.preview}
+                            </p>
+                            <div className="flex items-center justify-between mt-2">
+                              <Badge variant="outline" className="text-xs">
+                                {session.messageCount} 条消息
+                              </Badge>
+                              <span className="text-xs text-gray-500">
+                                {session.duration}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 对话详情 */}
+                    <div className="lg:col-span-2">
+                      {selectedSession ? (
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-medium text-gray-900">
+                              {selectedSession.title}
+                            </h3>
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline">
+                                {selectedSession.messageCount} 条消息
+                              </Badge>
+                              <span className="text-sm text-gray-500">
+                                {selectedSession.date} · {selectedSession.duration}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-4 max-h-96 overflow-y-auto">
+                            {selectedSession.messages.map((message, index) => (
+                              <div key={index} className="flex space-x-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                                  message.role === 'user'
+                                    ? 'bg-blue-100 text-blue-600'
+                                    : 'bg-purple-100 text-purple-600'
+                                }`}>
+                                  {message.role === 'user' ? '👤' : '🤖'}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <span className="font-medium text-sm text-gray-900">
+                                      {message.role === 'user' ? '你' : 'Claude'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      {message.timestamp}
+                                    </span>
+                                  </div>
+                                  <div className={`p-3 rounded-lg ${
+                                    message.role === 'user'
+                                      ? 'bg-blue-50 border border-blue-100'
+                                      : 'bg-gray-50 border border-gray-100'
+                                  }`}>
+                                    <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                      {message.content}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="text-gray-400 text-4xl mb-4">💬</div>
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">选择一个对话会话</h3>
+                          <p className="text-gray-600">点击左侧的会话来查看详细的对话内容</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
+      
+      {/* 悬浮AI助手 */}
+      <FloatingAIAssistant chatHistory={mockChatSessions} />
     </div>
   )
 }

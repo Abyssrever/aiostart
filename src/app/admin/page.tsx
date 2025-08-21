@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import Navigation from '@/components/Navigation'
+import FloatingAIAssistant from '@/components/FloatingAIAssistant'
+import { AdminOnlyRoute } from '@/components/ProtectedRoute'
+import { useAuth } from '@/contexts/AuthContext'
 import { mockData } from '@/data/mockData'
 
 // 使用集中的mock数据
@@ -16,19 +19,14 @@ const mockGradeData = mockData.adminData.gradeData
 const mockMajorData = mockData.adminData.majorData
 const mockResourceData = mockData.adminData.resourceData
 const mockAIRecommendations = mockData.adminData.aiRecommendations
+const mockChatSessions = mockData.chatSessions
 
 export default function AdminDashboard() {
-  const [selectedView, setSelectedView] = useState<'overview' | 'grades' | 'majors' | 'resources'>('overview')
+  const { user } = useAuth()
+  const [selectedView, setSelectedView] = useState<'overview' | 'grades' | 'majors' | 'resources' | 'ai-history'>('overview')
   const [selectedRecommendation, setSelectedRecommendation] = useState<number | null>(null)
+  const [selectedSession, setSelectedSession] = useState<any>(null)
   const router = useRouter()
-
-  const handleLogout = () => {
-    router.push('/login')
-  }
-
-  const handleSwitchRole = () => {
-    router.push('/dashboard')
-  }
 
   const getUtilizationColor = (utilization: number) => {
     if (utilization >= 80) return 'text-red-600'
@@ -55,11 +53,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation 
-         currentRole="admin"
-         currentPage="/admin"
-       />
+    <AdminOnlyRoute>
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* 视图切换器 */}
@@ -69,11 +65,12 @@ export default function AdminDashboard() {
               { key: 'overview', label: '总览' },
               { key: 'grades', label: '年级分析' },
               { key: 'majors', label: '专业分析' },
-              { key: 'resources', label: '资源管理' }
+              { key: 'resources', label: '资源管理' },
+              { key: 'ai-history', label: 'AI历史记录' }
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setSelectedView(tab.key as 'overview' | 'grades' | 'majors' | 'resources')}
+                onClick={() => setSelectedView(tab.key as 'overview' | 'grades' | 'majors' | 'resources' | 'ai-history')}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   selectedView === tab.key
                     ? 'bg-white text-purple-600 shadow-sm'
@@ -302,7 +299,89 @@ export default function AdminDashboard() {
             </Card>
           </div>
         )}
+
+        {/* AI历史记录 */}
+        {selectedView === 'ai-history' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <span className="mr-2">🤖</span>
+                  AI对话历史记录
+                </CardTitle>
+                <CardDescription>
+                  查看你与AI助手的所有对话记录，回顾管理过程中的问答
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {mockChatSessions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-6xl mb-4">🤖</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">暂无AI对话记录</h3>
+                    <p className="text-gray-600 mb-4">开始与AI助手对话，这里将显示你们的聊天历史</p>
+                    <Button className="bg-blue-600 hover:bg-blue-700">
+                      开始对话
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {mockChatSessions.map((session) => (
+                      <div key={session.id} className="border rounded-lg overflow-hidden">
+                        <div 
+                          className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => setSelectedSession(selectedSession === session.id ? null : session.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium text-gray-900">{session.title}</h3>
+                              <p className="text-sm text-gray-600">{session.messages.length} 条消息</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-500">{session.timestamp}</span>
+                              <div className={`transform transition-transform ${
+                                selectedSession === session.id ? 'rotate-180' : ''
+                              }`}>
+                                ▼
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {selectedSession === session.id && (
+                          <div className="p-4 space-y-3 bg-white">
+                            {session.messages.map((message, index) => (
+                              <div key={index} className={`flex ${
+                                message.type === 'user' ? 'justify-end' : 'justify-start'
+                              }`}>
+                                <div className={`max-w-[80%] p-3 rounded-lg ${
+                                  message.type === 'user' 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-gray-100 text-gray-900'
+                                }`}>
+                                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                  <p className={`text-xs mt-1 ${
+                                    message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
+                                  }`}>
+                                    {message.timestamp}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
-    </div>
+      
+      {/* 悬浮AI助手 */}
+      <FloatingAIAssistant chatHistory={mockChatSessions} />
+      </div>
+    </AdminOnlyRoute>
   )
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,28 +10,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
 import {
   User,
   GraduationCap,
   Shield,
   Target,
-  MessageSquare,
   BarChart3,
   Settings,
   LogOut,
   ChevronDown,
   Home
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface NavigationProps {
-  currentRole: 'student' | 'teacher' | 'admin'
   currentPage?: string
 }
 
-export default function Navigation({ currentRole, currentPage }: NavigationProps) {
+export default function Navigation({ currentPage }: NavigationProps) {
   const router = useRouter()
-  const [role, setRole] = useState(currentRole)
+  const { user, logout, isAuthenticated } = useAuth()
+
+  // 如果未认证，不显示导航栏
+  if (!isAuthenticated || !user) {
+    return null
+  }
 
   const roleConfig = {
     student: {
@@ -42,7 +44,6 @@ export default function Navigation({ currentRole, currentPage }: NavigationProps
       routes: [
         { path: '/dashboard', label: '个人中心', icon: Home },
         { path: '/okr', label: 'OKR管理', icon: Target },
-        { path: '/chat', label: 'AI助手', icon: MessageSquare },
       ]
     },
     teacher: {
@@ -52,7 +53,6 @@ export default function Navigation({ currentRole, currentPage }: NavigationProps
       routes: [
         { path: '/teacher', label: '教师仪表盘', icon: BarChart3 },
         { path: '/okr', label: 'OKR管理', icon: Target },
-        { path: '/chat', label: 'AI助手', icon: MessageSquare },
       ]
     },
     admin: {
@@ -62,25 +62,19 @@ export default function Navigation({ currentRole, currentPage }: NavigationProps
       routes: [
         { path: '/admin', label: '管理仪表盘', icon: BarChart3 },
         { path: '/okr', label: 'OKR管理', icon: Target },
-        { path: '/settings', label: '系统设置', icon: Settings },
       ]
     }
   }
 
-  const currentConfig = roleConfig[role]
+  const currentConfig = roleConfig[user.role]
   const CurrentRoleIcon = currentConfig.icon
-
-  const handleRoleSwitch = (newRole: 'student' | 'teacher' | 'admin') => {
-    setRole(newRole)
-    const targetRoute = roleConfig[newRole].routes[0].path
-    router.push(targetRoute)
-  }
 
   const handleNavigation = (path: string) => {
     router.push(path)
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout()
     router.push('/login')
   }
 
@@ -122,56 +116,49 @@ export default function Navigation({ currentRole, currentPage }: NavigationProps
 
         {/* User Menu */}
         <div className="flex items-center space-x-4">
-          {/* Role Switcher */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center space-x-2">
-                <div className={`w-6 h-6 ${currentConfig.color} rounded-full flex items-center justify-center`}>
-                  <CurrentRoleIcon className="w-3 h-3 text-white" />
-                </div>
-                <span>{currentConfig.label}</span>
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>切换角色</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {Object.entries(roleConfig).map(([roleKey, config]) => {
-                const Icon = config.icon
-                return (
-                  <DropdownMenuItem
-                    key={roleKey}
-                    onClick={() => handleRoleSwitch(roleKey as 'student' | 'teacher' | 'admin')}
-                    className="flex items-center space-x-2"
-                  >
-                    <div className={`w-4 h-4 ${config.color} rounded-full flex items-center justify-center`}>
-                      <Icon className="w-2 h-2 text-white" />
-                    </div>
-                    <span>{config.label}</span>
-                    {roleKey === role && (
-                      <Badge variant="secondary" className="ml-auto text-xs">当前</Badge>
-                    )}
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Role Display Button (Non-clickable) */}
+          <Button 
+            variant="outline" 
+            className="flex items-center space-x-2 cursor-default hover:bg-gray-50"
+            disabled
+          >
+            <div className={`w-6 h-6 ${currentConfig.color} rounded-full flex items-center justify-center`}>
+              <CurrentRoleIcon className="w-3 h-3 text-white" />
+            </div>
+            <span>{currentConfig.label}</span>
+          </Button>
 
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-gray-600" />
+                <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden">
+                  {user.avatar ? (
+                    <img 
+                      src={user.avatar} 
+                      alt={user.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-4 h-4 text-gray-600" />
+                  )}
                 </div>
-                <span className="hidden md:block">张三</span>
+                <span className="hidden md:block">{user.name}</span>
                 <ChevronDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>我的账户</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.name}</span>
+                  <span className="text-xs text-gray-500">{currentConfig.label}</span>
+                </div>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex items-center space-x-2">
+              <DropdownMenuItem 
+                onClick={() => router.push('/settings')}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
                 <Settings className="w-4 h-4" />
                 <span>个人设置</span>
               </DropdownMenuItem>

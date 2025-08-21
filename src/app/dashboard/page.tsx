@@ -10,6 +10,10 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import Navigation from '@/components/Navigation'
+import FloatingAIAssistant from '@/components/FloatingAIAssistant'
+import { StudentOnlyRoute } from '@/components/ProtectedRoute'
+import { useAuth } from '@/contexts/AuthContext'
+
 import { mockData } from '@/data/mockData'
 
 // 使用集中的mock数据
@@ -17,51 +21,15 @@ const mockStudentInfo = mockData.users.student
 const mockOKRs = mockData.okrs
 const mockLearningAnalytics = mockData.learningAnalytics
 const mockRecommendedResources = mockData.recommendedResources
-const mockChatHistory = mockData.chatHistory
+const mockChatSessions = mockData.chatSessions
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [selectedOKR, setSelectedOKR] = useState<number | null>(null)
   const [editingOKR, setEditingOKR] = useState<number | null>(null)
-  const [newMessage, setNewMessage] = useState('')
-  const [messages, setMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([])
-  const [activeTab, setActiveTab] = useState<'okr' | 'analytics' | 'resources' | 'chat'>('okr')
+  const [selectedView, setSelectedView] = useState<'overview' | 'learning' | 'resources' | 'ai-history'>('overview')
+  const [selectedSession, setSelectedSession] = useState<any>(null)
   const router = useRouter()
-
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return
-
-    const userMessage = { role: 'user' as const, content: newMessage }
-    const aiResponse = { 
-      role: 'assistant' as const, 
-      content: getAIResponse(newMessage)
-    }
-
-    setMessages([...messages, userMessage, aiResponse])
-    setNewMessage('')
-  }
-
-  const getAIResponse = (message: string): string => {
-    const responses = [
-      '根据你的学习进度，我建议你继续专注于算法练习，这将有助于提升你的编程思维能力。',
-      '你在前端开发方面表现不错！建议深入学习TypeScript，这将让你的代码更加健壮。',
-      '从你的OKR完成情况来看，你的学习节奏很好。保持这种状态，同时注意劳逸结合。',
-      '我注意到你的英语学习进度稍慢，建议每天抽出30分钟进行英语阅读练习。',
-      '基于你的专业背景，我推荐你关注一些开源项目，这将有助于提升你的实战经验。'
-    ]
-    return responses[Math.floor(Math.random() * responses.length)]
-  }
-
-  const handleLogout = () => {
-    router.push('/login')
-  }
-
-  const handleSwitchToTeacher = () => {
-    router.push('/teacher')
-  }
-
-  const handleSwitchToAdmin = () => {
-    router.push('/admin')
-  }
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -86,11 +54,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation 
-         currentRole="student"
-         currentPage="/dashboard"
-       />
+    <StudentOnlyRoute>
+      <div className="min-h-screen bg-gray-50">
+        <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* 学生信息概览卡片 */}
@@ -132,13 +98,13 @@ export default function Dashboard() {
               { key: 'okr', label: 'OKR管理', icon: '🎯' },
               { key: 'analytics', label: '学习分析', icon: '📊' },
               { key: 'resources', label: '推荐资源', icon: '📚' },
-              { key: 'chat', label: 'AI助手', icon: '🤖' }
+              { key: 'ai-history', label: 'AI历史记录', icon: '🤖' }
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as 'okr' | 'analytics' | 'resources' | 'chat')}
+                onClick={() => setSelectedView(tab.key as 'okr' | 'analytics' | 'resources' | 'ai-history')}
                 className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === tab.key
+                  selectedView === tab.key
                     ? 'bg-white text-purple-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
@@ -154,7 +120,7 @@ export default function Dashboard() {
           {/* 主要内容区域 */}
           <div className="lg:col-span-2 space-y-6">
             {/* OKR管理 */}
-            {activeTab === 'okr' && (
+            {selectedView === 'okr' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">我的OKR</h2>
@@ -206,7 +172,7 @@ export default function Dashboard() {
             )}
 
             {/* 学习分析 */}
-            {activeTab === 'analytics' && (
+            {selectedView === 'analytics' && (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -288,7 +254,7 @@ export default function Dashboard() {
             )}
 
             {/* 推荐资源 */}
-            {activeTab === 'resources' && (
+            {selectedView === 'resources' && (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -340,126 +306,108 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* AI助手聊天 */}
-            {activeTab === 'chat' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <span className="mr-2">🤖</span>
-                    AI学习助手
-                  </CardTitle>
-                  <CardDescription>
-                    智能学习助手，为你提供个性化的学习指导和答疑
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-96 flex flex-col">
-                    <div className="flex-1 overflow-y-auto mb-4 p-4 bg-gray-50 rounded-lg">
-                      {messages.length === 0 ? (
-                        <div className="text-center text-gray-500 mt-8">
-                          <p>👋 你好！我是你的AI学习助手</p>
-                          <p className="text-sm mt-2">你可以问我关于学习、OKR管理、职业规划等任何问题</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {messages.map((message, index) => (
-                            <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                                message.role === 'user' 
-                                  ? 'bg-purple-600 text-white' 
-                                  : 'bg-white border'
-                              }`}>
-                                {message.content}
+            {/* AI历史记录 */}
+            {selectedView === 'ai-history' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <span className="mr-2">🤖</span>
+                      AI对话历史
+                    </CardTitle>
+                    <CardDescription>
+                      查看你与AI助手的所有对话记录，回顾学习过程中的问答
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {mockChatSessions.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="text-gray-400 text-6xl mb-4">🤖</div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">还没有对话记录</h3>
+                        <p className="text-gray-600 mb-4">开始与AI助手对话吧</p>
+                        <Button className="bg-purple-600 hover:bg-purple-700">
+                          开始对话
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {mockChatSessions.map((session) => (
+                          <div 
+                            key={session.id} 
+                            className="p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 group"
+                            onClick={() => setSelectedSession(session)}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors duration-150 truncate">
+                                  {session.title}
+                                </h4>
+                                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                                  {session.lastMessage}
+                                </p>
+                                <div className="flex items-center mt-2 space-x-4 text-xs text-gray-400">
+                                  <span>{new Date(session.timestamp).toLocaleDateString('zh-CN', { 
+                                    month: 'short', 
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}</span>
+                                  <span>{session.messageCount} 条消息</span>
+                                  <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                                    {session.category}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="输入你的问题..."
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      />
-                      <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                        发送
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
             )}
+
           </div>
 
           {/* 右侧信息区域 */}
           <div className="space-y-6">
-            {/* 聊天历史 - 只在聊天标签页显示 */}
-            {activeTab === 'chat' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <span className="mr-2">💬</span>
-                    聊天记录
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {mockChatHistory.map((chat) => (
-                      <div key={chat.id} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-medium text-sm text-gray-900 line-clamp-1">
-                            {chat.type === 'user' ? '用户提问' : 'AI回答'}
-                          </h3>
-                          <Badge className="bg-blue-100 text-blue-800">
-                            {chat.type === 'user' ? '提问' : '回答'}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1 line-clamp-2">{chat.content}</p>
-                        <p className="text-xs text-gray-400 mt-2">{chat.timestamp}</p>
-                      </div>
-                    ))}
+            {/* 快速统计 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <span className="mr-2">📈</span>
+                  快速统计
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">活跃OKR</span>
+                    <span className="font-semibold">{mockOKRs.length}</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* 快速统计 - 在非聊天标签页显示 */}
-            {activeTab !== 'chat' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <span className="mr-2">📈</span>
-                    快速统计
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">活跃OKR</span>
-                      <span className="font-semibold">{mockOKRs.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">平均完成度</span>
-                      <span className="font-semibold text-green-600">
-                        {Math.round(mockOKRs.reduce((acc, okr) => acc + okr.progress, 0) / mockOKRs.length)}%
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">本周学习</span>
-                      <span className="font-semibold text-blue-600">{mockLearningAnalytics.weeklyStudyTime.reduce((total, week) => total + week.hours, 0)}h</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">AI对话</span>
-                      <span className="font-semibold">{mockChatHistory.length}</span>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">平均完成度</span>
+                    <span className="font-semibold text-green-600">
+                      {Math.round(mockOKRs.reduce((acc, okr) => acc + okr.progress, 0) / mockOKRs.length)}%
+                    </span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">本周学习</span>
+                    <span className="font-semibold text-blue-600">{mockLearningAnalytics.weeklyStudyTime.reduce((total, week) => total + week.hours, 0)}h</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">AI对话</span>
+                    <span className="font-semibold">{mockChatSessions.length}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* 今日建议 */}
             <Card>
@@ -486,6 +434,94 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-    </div>
-  )
+      
+      {/* 悬浮AI助手 */}
+       <FloatingAIAssistant chatHistory={mockChatSessions} />
+       
+       {/* 对话详情弹窗 */}
+       {selectedSession && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+             {/* 弹窗头部 */}
+             <div className="flex items-center justify-between p-6 border-b border-gray-200">
+               <div>
+                 <h2 className="text-xl font-semibold text-gray-900">{selectedSession.title}</h2>
+                 <div className="flex items-center mt-1 space-x-4 text-sm text-gray-500">
+                   <span>{new Date(selectedSession.timestamp).toLocaleDateString('zh-CN', {
+                     year: 'numeric',
+                     month: 'long',
+                     day: 'numeric',
+                     hour: '2-digit',
+                     minute: '2-digit'
+                   })}</span>
+                   <span>{selectedSession.messageCount} 条消息</span>
+                   <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
+                     {selectedSession.category}
+                   </span>
+                 </div>
+               </div>
+               <button
+                 onClick={() => setSelectedSession(null)}
+                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-150"
+               >
+                 <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                 </svg>
+               </button>
+             </div>
+             
+             {/* 对话内容 */}
+             <div className="flex-1 overflow-y-auto p-6">
+               <div className="space-y-6">
+                 {selectedSession.messages.map((message: any) => (
+                   <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                     <div className={`max-w-[80%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+                       <div className="flex items-center mb-2">
+                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ${
+                           message.type === 'user' ? 'bg-blue-500' : 'bg-purple-500'
+                         }`}>
+                           {message.type === 'user' ? 'U' : 'AI'}
+                         </div>
+                         <span className="ml-3 text-sm text-gray-500">
+                           {new Date(message.timestamp).toLocaleTimeString('zh-CN', {
+                             hour: '2-digit',
+                             minute: '2-digit'
+                           })}
+                         </span>
+                       </div>
+                       <div className={`p-4 rounded-lg ${
+                         message.type === 'user' 
+                           ? 'bg-blue-500 text-white' 
+                           : 'bg-gray-100 text-gray-900'
+                       }`}>
+                         <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                           {message.content}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             </div>
+             
+             {/* 弹窗底部 */}
+             <div className="p-6 border-t border-gray-200 bg-gray-50">
+               <div className="flex items-center justify-between">
+                 <div className="text-sm text-gray-500">
+                   共 {selectedSession.messageCount} 条消息
+                 </div>
+                 <button
+                   onClick={() => setSelectedSession(null)}
+                   className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-150"
+                 >
+                   关闭
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
+       </div>
+     </StudentOnlyRoute>
+   )
 }
