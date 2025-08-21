@@ -639,7 +639,7 @@ export default function OKRManagement() {
       </div>
       
       {/* 悬浮AI助手 */}
-      <FloatingAIAssistant chatHistory={mockChatSessions} />
+      <FloatingAIAssistant chatHistory={mockChatSessions.flatMap(session => session.messages)} />
     </div>
   )
 }

@@ -436,7 +436,7 @@ export default function Dashboard() {
       </div>
       
       {/* 悬浮AI助手 */}
-       <FloatingAIAssistant chatHistory={mockChatSessions} />
+      <FloatingAIAssistant chatHistory={mockChatSessions.flatMap(session => session.messages)} />
        
        {/* 对话详情弹窗 */}
        {selectedSession && (
