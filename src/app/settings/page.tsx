@@ -204,9 +204,9 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-medium">{profileData.name}</h3>
-                    <p className="text-gray-500">{user?.role === 'student' ? '学生' : user?.role === 'teacher' ? '教师' : '管理员'}</p>
+                    <p className="text-gray-500">{user?.roles?.[0] === 'student' ? '学生' : user?.roles?.[0] === 'teacher' ? '教师' : '管理员'}</p>
                     <Badge variant="outline" className="mt-2">
-                      {user?.role === 'student' ? '学生账户' : user?.role === 'teacher' ? '教师账户' : '管理员账户'}
+                      {user?.roles?.[0] === 'student' ? '学生账户' : user?.roles?.[0] === 'teacher' ? '教师账户' : '管理员账户'}
                     </Badge>
                   </div>
                 </div>
