@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Mail, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
-const LoginPage: React.FC = () => {
+const LoginContent: React.FC = () => {
   const [email, setEmail] = useState('')
   const [verificationCode, setVerificationCode] = useState('')
   const [error, setError] = useState('')
@@ -316,6 +316,26 @@ const LoginPage: React.FC = () => {
         </div>
       </div>
     </div>
+  )
+}
+
+const LoginPage: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
 

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/contexts/AuthContext'
+import { UserRole } from '@/lib/supabase'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2 } from 'lucide-react'
 
@@ -73,7 +74,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
     try {
       const result = await signUp(formData.email, formData.password, {
         name: formData.name,
-        role: formData.role,
+        role: formData.role as UserRole,
         student_id: formData.studentId || undefined
       })
       

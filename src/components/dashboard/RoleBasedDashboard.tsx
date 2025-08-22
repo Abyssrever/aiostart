@@ -56,7 +56,7 @@ const StudentDashboard: React.FC = () => {
             <div className="text-2xl font-bold">{mockLearningAnalytics.subjectProgress.reduce((acc, curr) => acc + curr.progress, 0) / mockLearningAnalytics.subjectProgress.length}%</div>
             <Progress value={mockLearningAnalytics.subjectProgress.reduce((acc, curr) => acc + curr.progress, 0) / mockLearningAnalytics.subjectProgress.length} className="mt-2" />
             <p className="text-xs text-muted-foreground mt-2">
-              本月完成 {mockLearningAnalytics.completedCourses} 门课程
+              本月完成 {mockLearningAnalytics.subjectProgress.filter(subject => subject.progress >= 80).length} 门课程
             </p>
           </CardContent>
         </Card>
@@ -87,7 +87,7 @@ const StudentDashboard: React.FC = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{mockLearningAnalytics.studyHours}h</div>
+            <div className="text-2xl font-bold">{mockLearningAnalytics.weeklyStudyTime.reduce((total, week) => total + week.hours, 0)}h</div>
             <p className="text-xs text-muted-foreground">
               本周学习时长
             </p>
