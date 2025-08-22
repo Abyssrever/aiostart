@@ -29,7 +29,7 @@ interface NavigationProps {
 
 export default function Navigation({ currentPage }: NavigationProps) {
   const router = useRouter()
-  const { user, logout, isAuthenticated } = useAuth()
+  const { user, signOut, isAuthenticated } = useAuth()
 
   // 如果未认证，不显示导航栏
   if (!isAuthenticated || !user) {
@@ -66,7 +66,20 @@ export default function Navigation({ currentPage }: NavigationProps) {
     }
   }
 
-  const currentConfig = roleConfig[user.role]
+  // 根据用户角色优先级确定当前配置
+  const getCurrentConfig = () => {
+    if (user.roles.includes('admin')) {
+      return roleConfig.admin
+    } else if (user.roles.includes('teacher')) {
+      return roleConfig.teacher
+    } else if (user.roles.includes('student')) {
+      return roleConfig.student
+    } else {
+      return roleConfig.student // 默认配置
+    }
+  }
+  
+  const currentConfig = getCurrentConfig()
   const CurrentRoleIcon = currentConfig.icon
 
   const handleNavigation = (path: string) => {
@@ -74,7 +87,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
   }
 
   const handleLogout = async () => {
-    await logout()
+    await signOut()
     router.push('/login')
   }
 

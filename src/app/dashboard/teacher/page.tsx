@@ -319,7 +319,13 @@ export default function TeacherDashboard() {
       </div>
       
       {/* 悬浮AI助手 */}
-      <FloatingAIAssistant chatHistory={mockChatSessions.flatMap(session => session.messages)} />
+      <FloatingAIAssistant
+        chatHistory={mockChatSessions.flatMap(session =>
+        session.messages.map(msg => ({
+        ...msg,
+        id: msg.id?.toString() || crypto.randomUUID(),
+        type: msg.type as "user" | "ai",
+      })))}/>
        
        {/* 对话详情弹窗 */}
        {selectedSession && (

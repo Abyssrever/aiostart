@@ -15,39 +15,41 @@ export default function ProtectedRoute({
   allowedRoles = ['student', 'teacher', 'admin'],
   redirectTo = '/login'
 }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!loading) {
+      console.log('ProtectedRoute: 检查权限，用户:', user?.name, '角色:', user?.roles, '允许角色:', allowedRoles)
+      
       // 如果用户未登录，重定向到登录页面
       if (!user) {
-        router.push(redirectTo)
+        console.log('ProtectedRoute: 用户未登录，重定向到:', redirectTo)
+        // 使用setTimeout避免在渲染过程中立即重定向
+        setTimeout(() => {
+          router.replace(redirectTo)
+        }, 100)
         return
       }
 
-      // 如果用户角色不在允许的角色列表中，重定向到对应角色的默认页面
-      if (!allowedRoles.includes(user.role)) {
-        switch (user.role) {
-          case 'student':
-            router.push('/dashboard')
-            break
-          case 'teacher':
-            router.push('/teacher')
-            break
-          case 'admin':
-            router.push('/admin')
-            break
-          default:
-            router.push('/login')
-        }
+      // 检查用户是否有允许的角色
+      const hasAllowedRole = user.roles && user.roles.length > 0 && user.roles.some(role => allowedRoles.includes(role))
+      console.log('ProtectedRoute: 角色检查结果:', hasAllowedRole)
+      
+      if (!hasAllowedRole) {
+        console.log('ProtectedRoute: 用户角色不匹配，重定向到未授权页面')
+        setTimeout(() => {
+          router.replace('/unauthorized')
+        }, 100)
         return
       }
+      
+      console.log('ProtectedRoute: 权限检查通过')
     }
-  }, [user, isLoading, allowedRoles, redirectTo, router])
+  }, [user, loading, allowedRoles, redirectTo, router])
 
   // 显示加载状态
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -59,7 +61,7 @@ export default function ProtectedRoute({
   }
 
   // 如果用户未登录或角色不匹配，不渲染内容
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user || !user.roles.some(role => allowedRoles.includes(role))) {
     return null
   }
 

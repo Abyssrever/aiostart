@@ -1,110 +1,456 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-
-// 用户角色类型
-export type UserRole = 'student' | 'teacher' | 'admin'
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { User as SupabaseUser, Session } from '@supabase/supabase-js'
+import { supabase, UserProfile, UserRole } from '@/lib/supabase'
 
 // 用户信息接口
 export interface User {
   id: string
-  username: string
+  email: string
   name: string
-  role: UserRole
+  roles: UserRole[]
   avatar?: string
+  student_id?: string
+  grade?: number
+  major?: string
+  class_name?: string
 }
 
 // 认证上下文接口
 interface AuthContextType {
   user: User | null
-  login: (username: string, password: string) => Promise<boolean>
-  logout: () => void
+  session: Session | null
+  loading: boolean
+  signIn: (email: string, password: string) => Promise<{ error?: string }>
+  signInWithOtp: (email: string, token: string) => Promise<{ error?: string }>
+  sendOtp: (email: string) => Promise<{ error?: string }>
+  signInWithMagicLink: (email: string) => Promise<{ error?: string }>
+  signInDirectly: (email: string) => Promise<{ error?: string }>
+  signUp: (email: string, password: string, userData: { name: string; student_id?: string; role?: UserRole }) => Promise<{ error?: string }>
+  signOut: () => Promise<void>
+  hasRole: (role: UserRole) => boolean
+  getUserRoles: () => UserRole[]
   isAuthenticated: boolean
-  isLoading: boolean
 }
 
 // 创建认证上下文
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// 预设测试账户
-const TEST_USERS: User[] = [
-  {
-    id: '1',
-    username: 'student',
-    name: '张三',
-    role: 'student',
-    avatar: ''
-  },
-  {
-    id: '2',
-    username: 'teacher',
-    name: '李老师',
-    role: 'teacher',
-    avatar: ''
-  },
-  {
-    id: '3',
-    username: 'admin',
-    name: '管理员',
-    role: 'admin',
-    avatar: ''
-  }
-]
-
 // 认证提供者组件
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // 组件挂载时检查本地存储的用户信息
+  // 获取用户角色 - 简化版本，直接从用户表获取
+  const fetchUserRoles = async (userId: string): Promise<UserRole[]> => {
+    try {
+      console.log('开始获取用户角色，用户ID:', userId)
+      
+      // 直接从用户表获取角色
+      const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .single()
+
+      console.log('用户角色查询结果:', { data, error })
+
+      if (error) {
+        console.error('获取用户角色失败:', error)
+        return ['student']
+      }
+
+      if (!data || !data.role) {
+        console.log('用户没有分配角色，返回默认学生角色')
+        return ['student']
+      }
+
+      const role = data.role as UserRole
+      console.log('获取到的用户角色:', role)
+      return [role]
+    } catch (error) {
+      console.error('获取用户角色异常:', error)
+      return ['student']
+    }
+  }
+
+  // 获取用户资料
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (profileError) {
+        console.error('获取用户资料失败:', profileError)
+        return null
+      }
+
+      // 直接从用户资料中获取角色
+      const role = profile.role as UserRole || 'student'
+      const roles = [role]
+      const userProfile = { ...profile, roles }
+      
+      console.log('用户资料获取成功，角色:', roles)
+      
+      // 设置用户信息
+      const userData: User = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.name,
+        roles,
+        avatar: profile.avatar_url || undefined,
+        student_id: profile.student_id || undefined,
+        grade: profile.grade || undefined,
+        major: profile.major || undefined,
+        class_name: profile.class_name || undefined
+      }
+      
+      setUser(userData)
+      return userProfile
+    } catch (error) {
+      console.error('获取用户资料异常:', error)
+      return null
+    }
+  }
+
+  // 发送OTP验证码
+  const sendOtp = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false, // 不自动创建用户，只允许已存在的用户登录
+        }
+      })
+
+      if (error) {
+        return { error: error.message }
+      }
+
+      return {}
+    } catch (error) {
+      return { error: '发送验证码失败，请稍后重试' }
+    }
+  }
+
+  // 发送Magic Link邮箱验证链接
+  const signInWithMagicLink = async (email: string) => {
+    try {
+      // 统一处理邮箱：转小写并去除空格
+      const normalizedEmail = email.trim().toLowerCase()
+      console.log('开始登录，原始邮箱:', email, '处理后邮箱:', normalizedEmail)
+      
+      // 检查用户是否存在于数据库中
+      console.log('发送查询请求，参数:', { table: 'users', select: 'email', filter: `email=eq.${normalizedEmail}` })
+      
+      const queryResult = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', normalizedEmail)
+
+      console.log('Supabase原始返回值:', JSON.stringify(queryResult, null, 2))
+      console.log('返回数据类型:', typeof queryResult.data, '数据内容:', queryResult.data)
+      console.log('错误信息:', queryResult.error)
+
+      const { data: existingUsers, error: queryError } = queryResult
+
+      if (queryError) {
+        console.error('查询用户时出错:', queryError)
+        return { error: '查询用户信息失败' }
+      }
+
+      if (!existingUsers || existingUsers.length === 0) {
+        console.log('用户不存在于数据库中，查询邮箱:', normalizedEmail)
+        return { error: '该邮箱未注册，请联系管理员' }
+      }
+      
+      // 对于数据库中存在的邮箱，直接返回成功，进入验证码界面
+      // 不发送真实邮件，用户可以输入任意6位数字验证码
+      console.log('邮箱存在于数据库中，进入验证码界面')
+      return {}
+    } catch (error) {
+      console.error('signInWithMagicLink错误:', error)
+      return { error: '发送验证邮件失败，请稍后重试' }
+    }
+  }
+
+  // 使用OTP验证码登录（临时版本：任意6位数字都可通过）
+  const signInWithOtp = async (email: string, token: string) => {
+    try {
+      // 统一处理邮箱：转小写并去除空格
+      const normalizedEmail = email.trim().toLowerCase()
+      console.log('OTP登录，原始邮箱:', email, '处理后邮箱:', normalizedEmail, '验证码:', token)
+      
+      // 检查验证码格式（必须是6位数字）
+      if (!/^\d{6}$/.test(token)) {
+        return { error: '请输入6位数字验证码' }
+      }
+
+      // 检查用户是否存在于数据库中
+      console.log('OTP查询请求参数:', { table: 'users', select: '*', filter: `email=eq.${normalizedEmail}` })
+      
+      const otpQueryResult = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', normalizedEmail)
+
+      console.log('OTP查询原始返回值:', JSON.stringify(otpQueryResult, null, 2))
+      console.log('OTP返回数据类型:', typeof otpQueryResult.data, '数据内容:', otpQueryResult.data)
+      console.log('OTP错误信息:', otpQueryResult.error)
+
+      const { data: existingUsers, error: userCheckError } = otpQueryResult
+
+      if (userCheckError || !existingUsers || existingUsers.length === 0) {
+        console.log('OTP登录失败，用户不存在，查询邮箱:', normalizedEmail)
+        return { error: '该邮箱未注册，请联系管理员' }
+      }
+
+      const existingUser = existingUsers[0]
+      console.log('OTP登录成功，找到用户:', existingUser)
+
+      // 直接从用户数据中获取角色
+      const role = existingUser.role as UserRole || 'student'
+      const roles = [role]
+      console.log('用户角色:', roles)
+      
+      // 直接设置用户登录状态（跳过真实验证）
+      const userData: User = {
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        roles,
+        avatar: existingUser.avatar_url || undefined,
+        student_id: existingUser.student_id || undefined,
+        grade: existingUser.grade || undefined,
+        major: existingUser.major || undefined,
+        class_name: existingUser.class_name || undefined
+      }
+      
+      setUser(userData)
+      return {}
+    } catch (error) {
+      return { error: '验证码验证失败，请稍后重试' }
+    }
+  }
+
+  // 直接登录（临时跳过验证）
+  const signInDirectly = async (email: string) => {
+    try {
+      // 检查用户是否存在于数据库中
+      const { data: existingUser, error: userCheckError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single()
+
+      if (userCheckError || !existingUser) {
+        return { error: '该邮箱未注册，请联系管理员' }
+      }
+
+      // 直接从用户数据中获取角色
+      const role = existingUser.role as UserRole || 'student'
+      const roles = [role]
+      console.log('直接登录用户角色:', roles)
+      
+      // 直接设置用户登录状态
+      const userData: User = {
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        roles,
+        avatar: existingUser.avatar_url || undefined,
+        student_id: existingUser.student_id || undefined,
+        grade: existingUser.grade || undefined,
+        major: existingUser.major || undefined,
+        class_name: existingUser.class_name || undefined
+      }
+      
+      // 设置用户状态并确保loading状态正确
+      setUser(userData)
+      
+      // 确保loading状态正确设置
+      setTimeout(() => {
+        setLoading(false)
+      }, 100)
+      
+      return {}
+    } catch (error) {
+      return { error: '登录失败，请稍后重试' }
+    }
+  }
+
+  // 登录
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) {
+        return { error: error.message }
+      }
+
+      return {}
+    } catch (error) {
+      return { error: '登录失败，请稍后重试' }
+    }
+  }
+
+  // 注册
+  const signUp = async (email: string, password: string, userData: { name: string; student_id?: string; role?: UserRole }) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
+      })
+
+      if (error) {
+        return { error: error.message }
+      }
+
+      if (data.user) {
+        // 创建用户资料
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: data.user.email!,
+            name: userData.name,
+            student_id: userData.student_id
+          })
+
+        if (profileError) {
+          console.error('创建用户资料失败:', profileError)
+          return { error: '注册失败，请稍后重试' }
+        }
+
+        // 分配默认角色（学生）
+        const { data: studentRole } = await supabase
+          .from('roles')
+          .select('id')
+          .eq('name', 'student')
+          .single()
+
+        if (studentRole) {
+          await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role_id: studentRole.id
+            })
+        }
+      }
+
+      return {}
+    } catch (error) {
+      return { error: '注册失败，请稍后重试' }
+    }
+  }
+
+  // 登出
+  const signOut = async () => {
+    await supabase.auth.signOut()
+  }
+
+  // 检查用户是否有特定角色
+  const hasRole = (role: UserRole): boolean => {
+    return user?.roles?.includes(role) || false
+  }
+
+  // 获取用户所有角色
+  const getUserRoles = (): UserRole[] => {
+    return user?.roles || []
+  }
+
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser')
-    if (savedUser) {
+    let mounted = true
+    
+    // 获取初始会话
+    const initializeAuth = async () => {
       try {
-        setUser(JSON.parse(savedUser))
+        console.log('AuthContext: 开始初始化认证状态')
+        setLoading(true)
+        
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!mounted) return
+        
+        console.log('AuthContext: 获取到会话:', session ? '存在' : '不存在')
+        setSession(session)
+        
+        if (session?.user) {
+          console.log('AuthContext: 用户已登录，获取用户资料')
+          await fetchUserProfile(session.user.id)
+        } else {
+          console.log('AuthContext: 用户未登录')
+          setUser(null)
+          setUserProfile(null)
+        }
+        
+        setLoading(false)
+        console.log('AuthContext: 认证状态初始化完成')
       } catch (error) {
-        console.error('解析用户信息失败:', error)
-        localStorage.removeItem('currentUser')
+        console.error('初始化认证状态失败:', error)
+        if (mounted) {
+          setUser(null)
+          setUserProfile(null)
+          setSession(null)
+          setLoading(false)
+        }
       }
     }
-    setIsLoading(false)
+
+    initializeAuth()
+
+    // 监听认证状态变化
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return
+      
+      console.log('AuthContext: 认证状态变化:', event, session ? '有会话' : '无会话')
+      
+      setSession(session)
+      
+      if (session?.user) {
+        console.log('AuthContext: 会话变化 - 用户已登录')
+        await fetchUserProfile(session.user.id)
+      } else {
+        console.log('AuthContext: 会话变化 - 用户未登录')
+        setUser(null)
+        setUserProfile(null)
+      }
+      
+      setLoading(false)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
-  // 登录函数
-  const login = async (username: string, password: string): Promise<boolean> => {
-    setIsLoading(true)
-    
-    // 模拟API调用延迟
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // 查找匹配的用户（简单验证：用户名和密码相同）
-    const foundUser = TEST_USERS.find(
-      u => u.username === username && username === password
-    )
-    
-    if (foundUser) {
-      setUser(foundUser)
-      localStorage.setItem('currentUser', JSON.stringify(foundUser))
-      setIsLoading(false)
-      return true
-    }
-    
-    setIsLoading(false)
-    return false
-  }
-
-  // 登出函数
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('currentUser')
-  }
-
-  const value: AuthContextType = {
+  const value = {
     user,
-    login,
-    logout,
-    isAuthenticated: !!user,
-    isLoading
+    session,
+    loading,
+    signIn,
+    signInWithOtp,
+    sendOtp,
+    signInWithMagicLink,
+    signInDirectly,
+    signUp,
+    signOut,
+    hasRole,
+    getUserRoles,
+    isAuthenticated: !!user
   }
 
   return (
@@ -115,7 +461,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 }
 
 // 使用认证上下文的Hook
-export const useAuth = (): AuthContextType => {
+export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')
@@ -123,41 +469,41 @@ export const useAuth = (): AuthContextType => {
   return context
 }
 
-// 角色权限检查函数
-export const hasPermission = (userRole: UserRole, requiredRole: UserRole): boolean => {
-  const roleHierarchy: Record<UserRole, number> = {
-    student: 1,
-    teacher: 2,
-    admin: 3
+// 权限检查函数
+export const hasPermission = (userRoles: UserRole[], requiredRole: UserRole): boolean => {
+  const roleHierarchy = {
+    'student': 1,
+    'teacher': 2,
+    'admin': 3
   }
   
-  return roleHierarchy[userRole] >= roleHierarchy[requiredRole]
+  return userRoles.some(role => roleHierarchy[role] >= roleHierarchy[requiredRole])
 }
 
-// 根据角色获取可访问的路由
-export const getAccessibleRoutes = (role: UserRole): string[] => {
-  switch (role) {
-    case 'student':
-      return ['/dashboard', '/okr']
-    case 'teacher':
-      return ['/dashboard', '/okr', '/teacher']
-    case 'admin':
-      return ['/dashboard', '/okr', '/teacher', '/admin']
-    default:
-      return []
+// 获取用户可访问的路由
+export const getAccessibleRoutes = (roles: UserRole[]): string[] => {
+  const allRoutes = new Set<string>()
+  
+  const routesByRole = {
+    'student': ['/dashboard/student', '/profile', '/courses'],
+    'teacher': ['/dashboard/teacher', '/profile', '/courses', '/students'],
+    'admin': ['/dashboard/admin', '/profile', '/courses', '/students', '/teachers', '/settings']
   }
+  
+  roles.forEach(role => {
+    routesByRole[role]?.forEach(route => allRoutes.add(route))
+  })
+  
+  return Array.from(allRoutes)
 }
 
-// 根据角色获取显示名称
+// 获取角色显示名称
 export const getRoleDisplayName = (role: UserRole): string => {
-  switch (role) {
-    case 'student':
-      return '学生'
-    case 'teacher':
-      return '教师'
-    case 'admin':
-      return '管理员'
-    default:
-      return '未知'
+  const roleNames = {
+    'student': '学生',
+    'teacher': '教师',
+    'admin': '管理员'
   }
+  
+  return roleNames[role] || role
 }

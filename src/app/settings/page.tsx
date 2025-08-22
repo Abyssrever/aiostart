@@ -30,7 +30,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import Navigation from '@/components/Navigation'
+
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation currentPage="/settings" />
+
       
       <div className="max-w-4xl mx-auto p-6">
         {/* 页面标题 */}

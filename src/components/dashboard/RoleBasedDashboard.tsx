@@ -21,7 +21,8 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { UserRole } from '@/types/auth'
+// 导入用户角色类型
+import { UserRole } from '@/lib/supabase'
 import { mockData } from '@/data/mockData'
 
 const StudentDashboard: React.FC = () => {
@@ -402,21 +403,22 @@ const AdminDashboard: React.FC = () => {
 }
 
 const RoleBasedDashboard: React.FC = () => {
-  const { user } = useAuth()
+  const { user, hasRole } = useAuth()
 
   if (!user) {
     return null
   }
 
-  switch (user.role) {
-    case UserRole.STUDENT:
-      return <StudentDashboard />
-    case UserRole.TEACHER:
-      return <TeacherDashboard />
-    case UserRole.ADMIN:
-      return <AdminDashboard />
-    default:
-      return <StudentDashboard />
+  // 根据用户角色优先级显示对应的仪表盘
+  if (hasRole('admin')) {
+    return <AdminDashboard />
+  } else if (hasRole('teacher')) {
+    return <TeacherDashboard />
+  } else if (hasRole('student')) {
+    return <StudentDashboard />
+  } else {
+    // 默认显示学生仪表盘
+    return <StudentDashboard />
   }
 }
 

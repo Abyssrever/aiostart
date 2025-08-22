@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-
+import Navigation from '@/components/Navigation'
 import FloatingAIAssistant from '@/components/FloatingAIAssistant'
 import { AdminOnlyRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
@@ -55,7 +55,7 @@ export default function AdminDashboard() {
   return (
     <AdminOnlyRoute>
       <div className="min-h-screen bg-gray-50">
-  
+        <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* 视图切换器 */}
@@ -381,13 +381,14 @@ export default function AdminDashboard() {
       
       {/* 悬浮AI助手 */}
       <FloatingAIAssistant
-      chatHistory={mockChatSessions.flatMap(session =>
-        session.messages.map(msg => ({
-        ...msg,
-        id: msg.id?.toString() || crypto.randomUUID(),
-        type: msg.type as "user" | "ai",
-      }))
-    )}/>
+        chatHistory={mockChatSessions.flatMap(session =>
+          session.messages.map(msg => ({
+            ...msg,
+            id: msg.id?.toString() || crypto.randomUUID(),
+            type: msg.type as "user" | "ai",
+          }))
+        )}
+    />
       </div>
     </AdminOnlyRoute>
   )

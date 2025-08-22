@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import Navigation from '@/components/Navigation'
+
 import FloatingAIAssistant from '@/components/FloatingAIAssistant'
 import { mockData } from '@/data/mockData'
 
@@ -152,10 +152,7 @@ export default function OKRManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation 
-        currentRole="student"
-        currentPage="/okr"
-      />
+
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* 功能标签页 */}
@@ -553,18 +550,18 @@ export default function OKRManagement() {
                                 {session.title}
                               </h4>
                               <span className="text-xs text-gray-500">
-                                {session.date}
+                                {session.timestamp}
                               </span>
                             </div>
                             <p className="text-xs text-gray-600 line-clamp-2">
-                              {session.preview}
+                              {session.lastMessage}
                             </p>
                             <div className="flex items-center justify-between mt-2">
                               <Badge variant="outline" className="text-xs">
                                 {session.messageCount} 条消息
                               </Badge>
                               <span className="text-xs text-gray-500">
-                                {session.duration}
+                                {session.timestamp}
                               </span>
                             </div>
                           </div>
@@ -590,7 +587,7 @@ export default function OKRManagement() {
                             </div>
                           </div>
                           <div className="space-y-4 max-h-96 overflow-y-auto">
-                            {selectedSession.messages.map((message, index) => (
+                            {selectedSession.messages.map((message: { role: string; timestamp: string; content: string }, index: number) => (
                               <div key={index} className="flex space-x-3">
                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
                                   message.role === 'user'
@@ -639,7 +636,13 @@ export default function OKRManagement() {
       </div>
       
       {/* 悬浮AI助手 */}
-      <FloatingAIAssistant chatHistory={mockChatSessions.flatMap(session => session.messages)} />
+      <FloatingAIAssistant
+        chatHistory={mockChatSessions.flatMap(session =>
+        session.messages.map(msg => ({
+        ...msg,
+        id: msg.id?.toString() || crypto.randomUUID(),
+        type: msg.type as "user" | "ai",
+    })))}/>
     </div>
   )
 }

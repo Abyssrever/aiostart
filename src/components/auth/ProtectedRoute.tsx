@@ -1,63 +1,112 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../../contexts/AuthContext'
-import { UserRole } from '@/types/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import type { UserRole } from '@/lib/supabase'
 import { Loader2 } from 'lucide-react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  requiredRoles?: UserRole[]
+  requiredRole?: UserRole
+  allowedRoles?: UserRole[]
   redirectTo?: string
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-  children,
-  requiredRoles = [],
-  redirectTo = '/login'
-}) => {
-  const { user, isAuthenticated } = useAuth()
+export function ProtectedRoute({ 
+  children, 
+  requiredRole, 
+  allowedRoles, 
+  redirectTo = '/auth' 
+}: ProtectedRouteProps) {
+  const { user, loading, hasRole } = useAuth()
   const router = useRouter()
+  const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
-    if (!loading) {
-      // 如果未认证，重定向到登录页
-      if (!isAuthenticated) {
-        router.push(redirectTo)
-        return
-      }
+    if (loading) return
 
-      // 如果需要特定角色且用户角色不匹配，重定向到无权限页面
-      if (requiredRoles.length > 0 && user && !requiredRoles.includes(user.role)) {
-        router.push('/unauthorized')
-        return
-      }
+    // 如果用户未登录，重定向到登录页
+    if (!user) {
+      router.push(redirectTo)
+      return
     }
-  }, [isAuthenticated, user, loading, router, requiredRoles, redirectTo])
+
+    // 检查角色权限
+    let hasPermission = true
+
+    if (requiredRole) {
+      hasPermission = hasRole(requiredRole)
+    } else if (allowedRoles && allowedRoles.length > 0) {
+      hasPermission = allowedRoles.some(role => hasRole(role))
+    }
+
+    if (!hasPermission) {
+      // 根据用户角色重定向到相应的仪表板
+      const userRoles = user.roles
+      if (userRoles.includes('admin')) {
+        router.push('/dashboard/admin')
+      } else if (userRoles.includes('teacher')) {
+        router.push('/dashboard/teacher')
+      } else if (userRoles.includes('student')) {
+        router.push('/dashboard/student')
+      } else {
+        router.push('/auth')
+      }
+      return
+    }
+
+    setIsAuthorized(true)
+  }, [user, loading, requiredRole, allowedRoles, hasRole, router, redirectTo])
 
   // 显示加载状态
-  if (loading) {
+  if (loading || !isAuthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
-          <p className="text-gray-600">验证用户身份中...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">加载中...</p>
         </div>
       </div>
     )
   }
 
-  // 如果未认证或角色不匹配，不渲染内容（等待重定向）
-  if (!isAuthenticated) {
-    return null
-  }
-
-  if (requiredRoles.length > 0 && user && !requiredRoles.includes(user.role as UserRole)) {
-    return null
-  }
-
   // 渲染受保护的内容
+  return <>{children}</>
+}
+
+// 角色检查组件
+interface RoleGuardProps {
+  children: React.ReactNode
+  requiredRole?: UserRole
+  allowedRoles?: UserRole[]
+  fallback?: React.ReactNode
+}
+
+export function RoleGuard({ 
+  children, 
+  requiredRole, 
+  allowedRoles, 
+  fallback = null 
+}: RoleGuardProps) {
+  const { user, hasRole } = useAuth()
+
+  if (!user) {
+    return <>{fallback}</>
+  }
+
+  let hasPermission = true
+
+  if (requiredRole) {
+    hasPermission = hasRole(requiredRole)
+  } else if (allowedRoles && allowedRoles.length > 0) {
+    hasPermission = allowedRoles.some(role => hasRole(role))
+  }
+
+  if (!hasPermission) {
+    return <>{fallback}</>
+  }
+
   return <>{children}</>
 }
 
