@@ -170,14 +170,6 @@ const LoginContent: React.FC = () => {
                       disabled={isLoading}
                     />
                   </div>
-                  <div className="text-sm text-gray-600 mt-2">
-                    <p className="font-medium">测试邮箱：</p>
-                    <ul className="list-disc list-inside space-y-1 text-xs">
-                      <li>1956094526@qq.com (学生)</li>
-                      <li>teacher@example.com (教师)</li>
-                      <li>admin@example.com (管理员)</li>
-                    </ul>
-                  </div>
                 </div>
 
                 {/* 错误提示 */}

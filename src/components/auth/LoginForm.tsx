@@ -1,211 +1,265 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAuth } from '@/contexts/AuthContext'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
-export function LoginForm() {
+export default function LoginForm() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [verificationCode, setVerificationCode] = useState('')
+  const [otp, setOtp] = useState('')
+  const [showOtpInput, setShowOtpInput] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showVerification, setShowVerification] = useState(false)
-  const [isFirstTimeLogin, setIsFirstTimeLogin] = useState(false)
+  const [success, setSuccess] = useState('')
+  const [countdown, setCountdown] = useState(0)
   
-  const { signIn, sendOtp, signInWithOtp } = useAuth()
+  const { signInWithOtp, sendOtp, signInDirectly } = useAuth()
   const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-
-    try {
-      if (!showVerification) {
-        // 检查是否为首次登录（这里简化处理，实际应该从后端获取）
-        const isFirstTime = !localStorage.getItem(`user_verified_${email}`)
-        setIsFirstTimeLogin(isFirstTime)
-        
-        if (isFirstTime) {
-          // 首次登录，发送OTP验证码
-          const result = await sendOtp(email)
-          
-          if (result.error) {
-            setError(result.error)
-          } else {
-            // 显示验证码输入界面
-            setShowVerification(true)
-          }
-        } else {
-          // 非首次登录，使用密码登录
-          const result = await signIn(email, password)
-          
-          if (result.error) {
-            setError(result.error)
-          } else {
-            router.push('/dashboard')
-          }
-        }
-      } else {
-        // 验证OTP验证码
-        const result = await signInWithOtp(email, verificationCode)
-        
-        if (result.error) {
-          setError(result.error)
-        } else {
-          // 验证成功，标记用户已验证
-          localStorage.setItem(`user_verified_${email}`, 'true')
-          router.push('/dashboard')
-        }
-      }
-    } catch (err) {
-      setError('登录失败，请稍后重试')
-    } finally {
-      setLoading(false)
+  // 倒计时效果
+  useEffect(() => {
+    let timer: NodeJS.Timeout
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000)
     }
-  }
+    return () => clearTimeout(timer)
+  }, [countdown])
 
-  const handleResendCode = async () => {
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) {
+      setError('请输入邮箱地址')
+      return
+    }
+
     setLoading(true)
     setError('')
-    
+    setSuccess('')
+
     try {
       const result = await sendOtp(email)
-      
       if (result.error) {
         setError(result.error)
       } else {
-        // 可以显示成功消息
-        console.log('验证码已重新发送到邮箱:', email)
+        setSuccess('验证码已发送到您的邮箱，请查收')
+        setShowOtpInput(true)
+        setCountdown(60) // 60秒倒计时
       }
-    } catch (err) {
-      setError('重新发送验证码失败，请稍后重试')
+    } catch (error) {
+      setError('发送验证码失败，请稍后重试')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleBackToLogin = () => {
-    // 返回登录页面
-    setShowVerification(false)
-    setVerificationCode('')
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!otp) {
+      setError('请输入验证码')
+      return
+    }
+
+    if (otp.length !== 6) {
+      setError('请输入6位验证码')
+      return
+    }
+
+    setLoading(true)
     setError('')
+
+    try {
+      const result = await signInWithOtp(email, otp)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setSuccess('登录成功！')
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      setError('验证失败，请重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDirectLogin = async () => {
+    if (!email) {
+      setError('请输入邮箱地址')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      const result = await signInDirectly(email)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setSuccess('登录成功！')
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      setError('登录失败，请重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendOtp = async () => {
+    if (countdown > 0) return
+    
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const result = await sendOtp(email)
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setSuccess('验证码已重新发送')
+        setCountdown(60)
+      }
+    } catch (error) {
+      setError('重新发送失败，请稍后重试')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">
-          {showVerification ? '验证身份' : '登录'}
-        </CardTitle>
-        <CardDescription className="text-center">
-          {showVerification 
-            ? `验证码已发送至 ${email}，请输入6位验证码` 
-            : '输入您的邮箱和密码来登录账户'
-          }
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold text-center">启明星系统</CardTitle>
+          <CardDescription className="text-center">
+            {!showOtpInput ? '请输入您的邮箱地址登录' : '请输入邮箱验证码'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           
-          {!showVerification ? (
-            // 登录表单
-            <>
+          {success && (
+            <Alert>
+              <AlertDescription className="text-green-600">{success}</AlertDescription>
+            </Alert>
+          )}
+
+          {!showOtpInput ? (
+            <form onSubmit={handleSendOtp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">邮箱</Label>
+                <Label htmlFor="email">邮箱地址</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="请输入邮箱"
+                  placeholder="请输入您的邮箱"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                />
+              </div>
+              
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading}
+              >
+                {loading ? '发送中...' : '发送验证码'}
+              </Button>
+              
+              <div className="text-center">
+                <Button
+                  type="button"
+                  variant="link"
+                  onClick={handleDirectLogin}
                   disabled={loading}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  临时跳过验证直接登录
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">邮箱地址</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  disabled
+                  className="bg-gray-50"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">密码</Label>
+                <Label htmlFor="otp">验证码</Label>
                 <Input
-                  id="password"
-                  type="password"
-                  placeholder="请输入密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </>
-          ) : (
-            // 验证码表单
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="verificationCode">验证码</Label>
-                <Input
-                  id="verificationCode"
+                  id="otp"
                   type="text"
                   placeholder="请输入6位验证码"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
+                  value={otp}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '') // 只允许数字
+                    setOtp(value)
+                  }}
                   maxLength={6}
                   required
-                  disabled={loading}
                   className="text-center text-lg tracking-widest"
                 />
+                <p className="text-xs text-gray-500 text-center">
+                  验证码已发送到您的邮箱，有效期5分钟，请使用最新收到的验证码
+                </p>
               </div>
               
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={loading || otp.length !== 6}
+              >
+                {loading ? '验证中...' : '验证登录'}
+              </Button>
+              
               <div className="flex justify-between text-sm">
-                <button
+                <Button
                   type="button"
-                  onClick={handleBackToLogin}
-                  className="text-gray-600 hover:text-gray-800"
-                  disabled={loading}
+                  variant="link"
+                  onClick={() => {
+                    setShowOtpInput(false)
+                    setOtp('')
+                    setError('')
+                    setSuccess('')
+                    setCountdown(0)
+                  }}
+                  className="text-gray-600 hover:text-gray-800 p-0"
                 >
-                  ← 返回登录
-                </button>
-                <button
+                  返回
+                </Button>
+                
+                <Button
                   type="button"
-                  onClick={handleResendCode}
-                  className="text-blue-600 hover:text-blue-800"
-                  disabled={loading}
+                  variant="link"
+                  onClick={handleResendOtp}
+                  disabled={loading || countdown > 0}
+                  className="text-blue-600 hover:text-blue-800 p-0"
                 >
-                  重新发送
-                </button>
+                  {countdown > 0 ? `重新发送(${countdown}s)` : '重新发送'}
+                </Button>
               </div>
-            </>
+            </form>
           )}
-          
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {showVerification ? '验证中...' : '登录中...'}
-              </>
-            ) : (
-              showVerification ? '验证' : '登录'
-            )}
-          </Button>
-        </form>
-        
-
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

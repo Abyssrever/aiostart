@@ -122,19 +122,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 发送OTP验证码
   const sendOtp = async (email: string) => {
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: false, // 不自动创建用户，只允许已存在的用户登录
-        }
+      console.log('发送验证码到邮箱:', email)
+      
+      // 调用 Next.js API 路由发送验证码
+      const response = await fetch('/api/send-verification-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       })
 
-      if (error) {
-        return { error: error.message }
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('发送验证码失败:', data)
+        return { error: data.error || '发送验证码失败，请稍后重试' }
       }
 
+      console.log('验证码发送成功')
       return {}
     } catch (error) {
+      console.error('发送验证码异常:', error)
       return { error: '发送验证码失败，请稍后重试' }
     }
   }
@@ -170,72 +179,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: '该邮箱未注册，请联系管理员' }
       }
       
-      // 对于数据库中存在的邮箱，直接返回成功，进入验证码界面
-      // 不发送真实邮件，用户可以输入任意6位数字验证码
-      console.log('邮箱存在于数据库中，进入验证码界面')
-      return {}
+      // 对于数据库中存在的邮箱，调用 sendOtp 发送真实验证码
+      console.log('邮箱存在于数据库中，发送验证码')
+      return await sendOtp(normalizedEmail)
     } catch (error) {
       console.error('signInWithMagicLink错误:', error)
       return { error: '发送验证邮件失败，请稍后重试' }
     }
   }
 
-  // 使用OTP验证码登录（临时版本：任意6位数字都可通过）
+  // 使用OTP验证码登录
   const signInWithOtp = async (email: string, token: string) => {
     try {
-      // 统一处理邮箱：转小写并去除空格
-      const normalizedEmail = email.trim().toLowerCase()
-      console.log('OTP登录，原始邮箱:', email, '处理后邮箱:', normalizedEmail, '验证码:', token)
+      console.log('验证验证码，邮箱:', email, '验证码:', token)
       
-      // 检查验证码格式（必须是6位数字）
-      if (!/^\d{6}$/.test(token)) {
-        return { error: '请输入6位数字验证码' }
+      // 调用 Next.js API 路由验证验证码
+      const response = await fetch('/api/verify-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(),
+          code: token.trim()
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.error('验证验证码失败:', data)
+        return { error: data.error || '验证失败，请稍后重试' }
       }
 
-      // 检查用户是否存在于数据库中
-      console.log('OTP查询请求参数:', { table: 'users', select: '*', filter: `email=eq.${normalizedEmail}` })
-      
-      const otpQueryResult = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', normalizedEmail)
-
-      console.log('OTP查询原始返回值:', JSON.stringify(otpQueryResult, null, 2))
-      console.log('OTP返回数据类型:', typeof otpQueryResult.data, '数据内容:', otpQueryResult.data)
-      console.log('OTP错误信息:', otpQueryResult.error)
-
-      const { data: existingUsers, error: userCheckError } = otpQueryResult
-
-      if (userCheckError || !existingUsers || existingUsers.length === 0) {
-        console.log('OTP登录失败，用户不存在，查询邮箱:', normalizedEmail)
-        return { error: '该邮箱未注册，请联系管理员' }
+      if (!data?.success || !data?.user) {
+        return { error: '验证失败，请重试' }
       }
 
-      const existingUser = existingUsers[0]
-      console.log('OTP登录成功，找到用户:', existingUser)
-
-      // 直接从用户数据中获取角色
-      const role = existingUser.role as UserRole || 'student'
-      const roles = [role]
-      console.log('用户角色:', roles)
-      
-      // 直接设置用户登录状态（跳过真实验证）
+      // 设置用户登录状态
+      const userInfo = data.user
       const userData: User = {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name,
-        roles,
-        avatar: existingUser.avatar_url || undefined,
-        student_id: existingUser.student_id || undefined,
-        grade: existingUser.grade || undefined,
-        major: existingUser.major || undefined,
-        class_name: existingUser.class_name || undefined
+        id: userInfo.id,
+        email: userInfo.email,
+        name: userInfo.name,
+        roles: [userInfo.role as UserRole],
+        avatar: userInfo.avatar_url || undefined,
+        student_id: userInfo.student_id || undefined,
+        grade: userInfo.grade || undefined,
+        major: userInfo.major || undefined,
+        class_name: userInfo.class_name || undefined
       }
       
+      console.log('验证码验证成功，设置用户状态:', userData)
       setUser(userData)
       return {}
     } catch (error) {
-      return { error: '验证码验证失败，请稍后重试' }
+      console.error('验证验证码异常:', error)
+      return { error: '验证失败，请稍后重试' }
     }
   }
 
