@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -29,6 +29,7 @@ interface NavigationProps {
 
 export default function Navigation({ currentPage }: NavigationProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user, signOut, isAuthenticated } = useAuth()
 
   // 如果未认证，不显示导航栏
@@ -42,7 +43,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
       icon: User,
       color: 'bg-blue-500',
       routes: [
-        { path: '/dashboard', label: '个人中心', icon: Home },
+        { path: '/dashboard', label: '总览', icon: Home },
         { path: '/okr', label: 'OKR管理', icon: Target },
       ]
     },
@@ -51,7 +52,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
       icon: GraduationCap,
       color: 'bg-green-500',
       routes: [
-        { path: '/teacher', label: '教师仪表盘', icon: BarChart3 },
+        { path: '/dashboard/teacher', label: '管理仪表盘', icon: BarChart3 },
         { path: '/okr', label: 'OKR管理', icon: Target },
       ]
     },
@@ -60,7 +61,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
       icon: Shield,
       color: 'bg-purple-500',
       routes: [
-        { path: '/admin', label: '管理仪表盘', icon: BarChart3 },
+        { path: '/dashboard/admin', label: '管理仪表盘', icon: BarChart3 },
         { path: '/okr', label: 'OKR管理', icon: Target },
       ]
     }
@@ -82,7 +83,37 @@ export default function Navigation({ currentPage }: NavigationProps) {
   const currentConfig = getCurrentConfig()
   const CurrentRoleIcon = currentConfig.icon
 
-  const handleNavigation = (path: string) => {
+  // 检查当前路径是否匹配导航项
+  const isActiveRoute = (routePath: string) => {
+    // 使用 pathname 而不是 currentPage prop
+    const currentPath = pathname || currentPage || '/'
+    
+    // 精确匹配
+    if (currentPath === routePath) {
+      return true
+    }
+    
+    // 特殊匹配规则
+    if (routePath === '/dashboard' && (currentPath === '/' || currentPath === '/dashboard')) {
+      return true
+    }
+    
+    // 子路径匹配
+    if (routePath !== '/' && currentPath.startsWith(routePath)) {
+      return true
+    }
+    
+    return false
+  }
+
+  const handleNavigation = (path: string, e?: React.MouseEvent) => {
+    // 阻止默认行为，确保不会在新窗口打开
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
+    // 使用 router.push 进行客户端导航
     router.push(path)
   }
 
@@ -108,17 +139,18 @@ export default function Navigation({ currentPage }: NavigationProps) {
         <div className="hidden md:flex items-center space-x-1">
           {currentConfig.routes.map((route) => {
             const Icon = route.icon
-            const isActive = currentPage === route.path || 
-              (route.path === '/dashboard' && currentPage === '/') ||
-              (route.path === '/teacher' && currentPage === '/teacher') ||
-              (route.path === '/admin' && currentPage === '/admin')
+            const isActive = isActiveRoute(route.path)
             
             return (
               <Button
                 key={route.path}
                 variant={isActive ? 'default' : 'ghost'}
-                className="flex items-center space-x-2"
-                onClick={() => handleNavigation(route.path)}
+                className={`flex items-center space-x-2 transition-colors ${
+                  isActive 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                onClick={(e) => handleNavigation(route.path, e)}
               >
                 <Icon className="w-4 h-4" />
                 <span>{route.label}</span>
@@ -193,18 +225,19 @@ export default function Navigation({ currentPage }: NavigationProps) {
         <div className="flex space-x-1 overflow-x-auto">
           {currentConfig.routes.map((route) => {
             const Icon = route.icon
-            const isActive = currentPage === route.path || 
-              (route.path === '/dashboard' && currentPage === '/') ||
-              (route.path === '/teacher' && currentPage === '/teacher') ||
-              (route.path === '/admin' && currentPage === '/admin')
+            const isActive = isActiveRoute(route.path)
             
             return (
               <Button
                 key={route.path}
                 variant={isActive ? 'default' : 'ghost'}
                 size="sm"
-                className="flex items-center space-x-1 whitespace-nowrap"
-                onClick={() => handleNavigation(route.path)}
+                className={`flex items-center space-x-1 whitespace-nowrap transition-colors ${
+                  isActive 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                onClick={(e) => handleNavigation(route.path, e)}
               >
                 <Icon className="w-4 h-4" />
                 <span className="text-xs">{route.label}</span>
