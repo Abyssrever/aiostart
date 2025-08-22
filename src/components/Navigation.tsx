@@ -25,9 +25,11 @@ import { useAuth } from '@/contexts/AuthContext'
 
 interface NavigationProps {
   currentPage?: string
+  activeTab?: string
+  onTabChange?: (tab: string) => void
 }
 
-export default function Navigation({ currentPage }: NavigationProps) {
+export default function Navigation({ currentPage, activeTab, onTabChange }: NavigationProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { user, signOut, isAuthenticated } = useAuth()
@@ -37,32 +39,35 @@ export default function Navigation({ currentPage }: NavigationProps) {
     return null
   }
 
+  // 检查是否在仪表板页面
+  const isDashboardPage = pathname?.startsWith('/dashboard') || pathname === '/'
+
   const roleConfig = {
     student: {
       label: '学生',
       icon: User,
       color: 'bg-blue-500',
-      routes: [
-        { path: '/dashboard', label: '总览', icon: Home },
-        { path: '/okr', label: 'OKR管理', icon: Target },
+      tabs: [
+        { key: 'overview', label: '总览', icon: Home },
+        { key: 'okr', label: 'OKR管理', icon: Target },
       ]
     },
     teacher: {
       label: '教师',
       icon: GraduationCap,
       color: 'bg-green-500',
-      routes: [
-        { path: '/dashboard/teacher', label: '管理仪表盘', icon: BarChart3 },
-        { path: '/okr', label: 'OKR管理', icon: Target },
+      tabs: [
+        { key: 'overview', label: '管理仪表盘', icon: BarChart3 },
+        { key: 'okr', label: 'OKR管理', icon: Target },
       ]
     },
     admin: {
       label: '管理员',
       icon: Shield,
       color: 'bg-purple-500',
-      routes: [
-        { path: '/dashboard/admin', label: '管理仪表盘', icon: BarChart3 },
-        { path: '/okr', label: 'OKR管理', icon: Target },
+      tabs: [
+        { key: 'overview', label: '管理仪表盘', icon: BarChart3 },
+        { key: 'okr', label: 'OKR管理', icon: Target },
       ]
     }
   }
@@ -83,38 +88,26 @@ export default function Navigation({ currentPage }: NavigationProps) {
   const currentConfig = getCurrentConfig()
   const CurrentRoleIcon = currentConfig.icon
 
-  // 检查当前路径是否匹配导航项
-  const isActiveRoute = (routePath: string) => {
-    // 使用 pathname 而不是 currentPage prop
-    const currentPath = pathname || currentPage || '/'
-    
-    // 精确匹配
-    if (currentPath === routePath) {
-      return true
-    }
-    
-    // 特殊匹配规则
-    if (routePath === '/dashboard' && (currentPath === '/' || currentPath === '/dashboard')) {
-      return true
-    }
-    
-    // 子路径匹配
-    if (routePath !== '/' && currentPath.startsWith(routePath)) {
-      return true
-    }
-    
-    return false
+  // 检查当前标签是否激活
+  const isActiveTab = (tabKey: string) => {
+    return activeTab === tabKey
   }
 
-  const handleNavigation = (path: string, e?: React.MouseEvent) => {
-    // 阻止默认行为，确保不会在新窗口打开
+  // 处理标签切换
+  const handleTabChange = (tabKey: string, e?: React.MouseEvent) => {
+    // 阻止默认行为
     if (e) {
       e.preventDefault()
       e.stopPropagation()
     }
     
-    // 使用 router.push 进行客户端导航
-    router.push(path)
+    // 如果在仪表板页面且有回调函数，使用标签切换
+    if (isDashboardPage && onTabChange) {
+      onTabChange(tabKey)
+    } else {
+      // 否则导航到仪表板页面
+      router.push('/dashboard')
+    }
   }
 
   const handleLogout = async () => {
@@ -137,23 +130,23 @@ export default function Navigation({ currentPage }: NavigationProps) {
 
         {/* Navigation Links */}
         <div className="hidden md:flex items-center space-x-1">
-          {currentConfig.routes.map((route) => {
-            const Icon = route.icon
-            const isActive = isActiveRoute(route.path)
+          {currentConfig.tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = isActiveTab(tab.key)
             
             return (
               <Button
-                key={route.path}
+                key={tab.key}
                 variant={isActive ? 'default' : 'ghost'}
                 className={`flex items-center space-x-2 transition-colors ${
                   isActive 
                     ? 'bg-blue-600 text-white hover:bg-blue-700' 
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
-                onClick={(e) => handleNavigation(route.path, e)}
+                onClick={(e) => handleTabChange(tab.key, e)}
               >
                 <Icon className="w-4 h-4" />
-                <span>{route.label}</span>
+                <span>{tab.label}</span>
               </Button>
             )
           })}
@@ -223,13 +216,13 @@ export default function Navigation({ currentPage }: NavigationProps) {
       {/* Mobile Navigation */}
       <div className="md:hidden mt-3 pt-3 border-t border-gray-200">
         <div className="flex space-x-1 overflow-x-auto">
-          {currentConfig.routes.map((route) => {
-            const Icon = route.icon
-            const isActive = isActiveRoute(route.path)
+          {currentConfig.tabs.map((tab) => {
+            const Icon = tab.icon
+            const isActive = isActiveTab(tab.key)
             
             return (
               <Button
-                key={route.path}
+                key={tab.key}
                 variant={isActive ? 'default' : 'ghost'}
                 size="sm"
                 className={`flex items-center space-x-1 whitespace-nowrap transition-colors ${
@@ -237,10 +230,10 @@ export default function Navigation({ currentPage }: NavigationProps) {
                     ? 'bg-blue-600 text-white hover:bg-blue-700' 
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
-                onClick={(e) => handleNavigation(route.path, e)}
+                onClick={(e) => handleTabChange(tab.key, e)}
               >
                 <Icon className="w-4 h-4" />
-                <span className="text-xs">{route.label}</span>
+                <span className="text-xs">{tab.label}</span>
               </Button>
             )
           })}
