@@ -1,0 +1,18 @@
+git：
+
+superbase：
+Project ID：sxhfiadommaopzoigtbz
+访问令牌：sbp_9d763306eb5aa2815e55cae1854f47c6d277ffed
+service_role：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4aGZpYWRvbW1hb3B6b2lndGJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc0MDMwNywiZXhwIjoyMDcxMzE2MzA3fQ.053-ksLf3gkj03KXZZOcdZoAJ7oYvKeckoCuKswZ1U4
+
+
+vercel：
+Project ID：prj_v7oFtpAIU1j0O02nzSQHsozqiEwh
+访问令牌：BSPTCXSxfy3WUA12Acebjb8l
+
+resend：
+APIKEY:re_NrCrqpmQ_JGK3MLUru425CgWs7cJXmEzc
+
+github_URL：
+https://github.com/Abyssrever/aiostart.git
+

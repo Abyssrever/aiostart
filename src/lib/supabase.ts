@@ -25,51 +25,63 @@ export type Database = {
         Row: {
           id: string
           student_id: string | null
-          name: string
+          username: string | null
           email: string
+          password_hash: string | null
+          full_name: string | null
+          name: string
           avatar_url: string | null
-          grade: number | null
-          major: string | null
-          class_name: string | null
           phone: string | null
-          wechat: string | null
-          bio: string | null
-          skills: any | null
-          interests: any | null
+          role_type: string
+          grade: string | null
+          major: string | null
+          department: string | null
+          class_name: string | null
+          role: string
+          status: string
+          last_login_at: string | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           student_id?: string | null
-          name: string
+          username?: string | null
           email: string
+          password_hash?: string | null
+          full_name?: string | null
+          name: string
           avatar_url?: string | null
-          grade?: number | null
-          major?: string | null
-          class_name?: string | null
           phone?: string | null
-          wechat?: string | null
-          bio?: string | null
-          skills?: any | null
-          interests?: any | null
+          role_type?: string
+          grade?: string | null
+          major?: string | null
+          department?: string | null
+          class_name?: string | null
+          role?: string
+          status?: string
+          last_login_at?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           student_id?: string | null
-          name?: string
+          username?: string | null
           email?: string
+          password_hash?: string | null
+          full_name?: string | null
+          name?: string
           avatar_url?: string | null
-          grade?: number | null
-          major?: string | null
-          class_name?: string | null
           phone?: string | null
-          wechat?: string | null
-          bio?: string | null
-          skills?: any | null
-          interests?: any | null
+          role_type?: string
+          grade?: string | null
+          major?: string | null
+          department?: string | null
+          class_name?: string | null
+          role?: string
+          status?: string
+          last_login_at?: string | null
           created_at?: string
           updated_at?: string
         }

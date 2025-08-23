@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress'
 import Navigation from '@/components/Navigation'
 import OKRManagement from '@/components/OKRManagement'
 import FloatingAIAssistant from '@/components/FloatingAIAssistant'
+import AIChat from '@/components/AIChat'
 import { StudentOnlyRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { mockData } from '@/data/mockData'
@@ -21,7 +22,7 @@ const mockChatSessions = mockData.chatSessions
 function StudentDashboardContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
-  const [selectedView, setSelectedView] = useState<'overview' | 'analytics' | 'resources' | 'ai-history'>('overview')
+  const [selectedView, setSelectedView] = useState<'overview' | 'analytics' | 'resources' | 'ai-history' | 'ai-chat'>('overview')
   const [selectedSession, setSelectedSession] = useState<any>(null)
   const router = useRouter()
 
@@ -62,21 +63,23 @@ function StudentDashboardContent() {
               <div className="mb-6">
                 <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
                   {[
-                    { key: 'overview', label: '学习概览' },
-                    { key: 'analytics', label: '学习分析' },
-                    { key: 'resources', label: '推荐资源' },
-                    { key: 'ai-history', label: 'AI历史记录' }
+                    { key: 'overview', label: '学习概览', icon: '📊' },
+                    { key: 'analytics', label: '学习分析', icon: '📈' },
+                    { key: 'resources', label: '推荐资源', icon: '🎯' },
+                    { key: 'ai-chat', label: 'AI对话', icon: '🤖' },
+                    { key: 'ai-history', label: '历史记录', icon: '💬' }
                   ].map((tab) => (
                     <button
                       key={tab.key}
-                      onClick={() => setSelectedView(tab.key as 'overview' | 'analytics' | 'resources' | 'ai-history')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      onClick={() => setSelectedView(tab.key as 'overview' | 'analytics' | 'resources' | 'ai-history' | 'ai-chat')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 ${
                         selectedView === tab.key
                           ? 'bg-white text-purple-600 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
-                      {tab.label}
+                      <span>{tab.icon}</span>
+                      <span>{tab.label}</span>
                     </button>
                   ))}
                 </div>
@@ -382,6 +385,37 @@ function StudentDashboardContent() {
                       </div>
                     </CardContent>
                   </Card>
+                </div>
+              )}
+
+              {/* AI对话 */}
+              {selectedView === 'ai-chat' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* OKR规划AI */}
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">🎯 OKR规划助手</h2>
+                      <AIChat 
+                        sessionType="okr_planning"
+                        onOKRSuggestion={(suggestion) => {
+                          console.log('OKR建议:', suggestion)
+                          // 这里可以集成到OKR创建流程中
+                        }}
+                      />
+                    </div>
+
+                    {/* 学习辅助AI */}
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">📚 学习辅助AI</h2>
+                      <AIChat sessionType="study_help" />
+                    </div>
+                  </div>
+                  
+                  {/* 通用AI助手 */}
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">💬 通用AI助手</h2>
+                    <AIChat sessionType="general" />
+                  </div>
                 </div>
               )}
 
