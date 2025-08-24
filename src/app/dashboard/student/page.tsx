@@ -345,7 +345,7 @@ function StudentDashboardContent() {
                           <h3 className="font-semibold text-gray-900">目标创建趋势</h3>
                           <div className="space-y-2">
                             {(() => {
-                              const monthlyData = {}
+                              const monthlyData: Record<string, number> = {}
                               okrs.forEach(okr => {
                                 const month = new Date(okr.created_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short' })
                                 monthlyData[month] = (monthlyData[month] || 0) + 1

@@ -107,14 +107,14 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       if (error) {
         console.error('创建OKR失败:', error)
         showError('创建OKR失败', '请检查网络连接后重试')
-      } else {
+      } else if (data) {
         console.log('OKR创建成功:', data)
         
         // 创建新的OKR对象，包含空的关键结果数组
         const newOKRWithKeyResults: OKRWithKeyResults = {
           ...data,
           keyResults: []
-        }
+        } as OKRWithKeyResults
         
         // 直接添加到当前OKR列表的顶部，避免重新加载
         setOkrs(prev => [newOKRWithKeyResults, ...prev])
@@ -189,7 +189,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       if (error) {
         console.error('创建关键结果失败:', error)
         showError('创建关键结果失败', '请检查输入信息后重试')
-      } else {
+      } else if (data) {
         console.log('关键结果创建成功:', data)
         
         // 直接更新对应OKR的关键结果列表，避免重新加载
