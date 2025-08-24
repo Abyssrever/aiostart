@@ -14,11 +14,11 @@ import { Plus, Edit, Trash2, Target, CheckCircle, Clock, AlertTriangle } from 'l
 
 import { useAuth } from '@/contexts/AuthContext'
 import { OKRServiceFixed, OKRWithKeyResults, NewOKR, NewKeyResult } from '@/lib/okr-service-fixed'
-import { OKRServiceProduction } from '@/lib/okr-service-production'
+import { OKRServiceAPI } from '@/lib/okr-service-api'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
-// 动态选择服务：开发环境用数据库，生产环境用本地存储演示
-const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceProduction
+// 动态选择服务：开发环境用Fixed服务，生产环境用API服务
+const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceAPI
 
 interface OKRManagementRealProps {
   userRole?: 'student' | 'teacher' | 'admin'

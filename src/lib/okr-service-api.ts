@@ -6,13 +6,12 @@ export interface OKR {
   user_id: string
   title: string
   description: string | null
-  category: string
-  priority: 'low' | 'medium' | 'high'
-  status: 'draft' | 'active' | 'completed' | 'paused'
-  progress: number
-  start_date: string
-  end_date: string
+  objective_type: 'personal' | 'course' | 'college'
   parent_okr_id: string | null
+  target_quarter: string | null
+  target_year: number
+  status: 'draft' | 'active' | 'completed' | 'cancelled'
+  progress_percentage: number
   created_at: string
   updated_at: string
 }
@@ -25,9 +24,9 @@ export interface KeyResult {
   target_value: number | null
   current_value: number
   unit: string | null
-  progress: number
+  measurement_type: 'numeric' | 'boolean' | 'percentage'
   status: 'active' | 'completed' | 'at_risk' | 'blocked'
-  measurement_type: string
+  progress_percentage: number
   created_at: string
   updated_at: string
 }
@@ -36,11 +35,10 @@ export interface NewOKR {
   user_id: string
   title: string
   description?: string
-  category?: string
-  priority?: string
-  status?: string
-  start_date: string
-  end_date: string
+  objective_type?: 'personal' | 'course' | 'college'
+  status?: 'draft' | 'active' | 'completed' | 'cancelled'
+  target_year?: number
+  target_quarter?: string
 }
 
 export interface NewKeyResult {
@@ -210,7 +208,7 @@ export class OKRServiceAPI {
       )
 
       const averageProgress = totalOKRs > 0 
-        ? Math.round(okrs.reduce((sum, okr) => sum + okr.progress, 0) / totalOKRs)
+        ? Math.round(okrs.reduce((sum, okr) => sum + okr.progress_percentage, 0) / totalOKRs)
         : 0
 
       const stats = {

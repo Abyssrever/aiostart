@@ -12,10 +12,10 @@ import FloatingAIAssistant from '@/components/FloatingAIAssistant'
 import { StudentOnlyRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { OKRServiceFixed, OKRWithKeyResults } from '@/lib/okr-service-fixed'
-import { OKRServiceProduction } from '@/lib/okr-service-production'
+import { OKRServiceAPI } from '@/lib/okr-service-api'
 
-// 动态选择OKR服务
-const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceProduction
+// 动态选择OKR服务 - 优先使用API服务，开发环境可回退到Fixed服务
+const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceAPI
 import { ChatService, ChatSession } from '@/lib/chat-service'
 
 

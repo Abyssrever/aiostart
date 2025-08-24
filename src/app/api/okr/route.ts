@@ -61,12 +61,10 @@ async function createOKR(okrData: any) {
         user_id: okrData.user_id,
         title: okrData.title,
         description: okrData.description || '',
-        category: okrData.category || 'personal',
-        priority: okrData.priority || 'medium',
-        status: okrData.status || 'active',
-        start_date: okrData.start_date || today,
-        end_date: okrData.end_date || endDate,
-        progress: 0
+        objective_type: (okrData.category || 'personal') as 'personal' | 'course' | 'college',
+        status: (okrData.status || 'active') as 'draft' | 'active' | 'completed' | 'cancelled',
+        target_year: new Date().getFullYear(),
+        progress_percentage: 0
       })
       .select()
       .single()
@@ -94,7 +92,7 @@ async function createKeyResult(keyResultData: any) {
         target_value: keyResultData.target_value || 0,
         unit: keyResultData.unit || '',
         current_value: 0,
-        progress: 0,
+        progress_percentage: 0,
         status: 'active',
         measurement_type: 'numeric'
       })
@@ -139,7 +137,7 @@ async function updateKeyResultProgress(updateData: any) {
       .from('key_results')
       .update({
         current_value: currentValue,
-        progress: Math.round(progressPercentage),
+        progress_percentage: Math.round(progressPercentage),
         status: progressPercentage >= 100 ? 'completed' : 'active'
       })
       .eq('id', keyResultId)
