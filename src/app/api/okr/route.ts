@@ -10,36 +10,23 @@ if (!supabaseUrl) {
   throw new Error('NEXT_PUBLIC_SUPABASE_URL is required')
 }
 
-// 如果没有Service Role Key，使用匿名密钥（受RLS限制）
+// 创建Supabase客户端 - 优先使用Service Role，回退到匿名密钥
 const effectiveKey = supabaseServiceKey || supabaseAnonKey
 const useServiceRole = !!supabaseServiceKey
 
-// 创建Supabase客户端
-const supabaseAdmin = createClient(supabaseUrl, effectiveKey, {
+const supabaseClient = createClient(supabaseUrl, effectiveKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   }
 })
 
-// 如果没有Service Role Key，返回错误响应
-function checkServiceRoleAvailable() {
-  if (!useServiceRole) {
-    return NextResponse.json({ 
-      error: 'API暂时不可用，请稍后重试',
-      details: 'Service role key not configured' 
-    }, { status: 503 })
-  }
-  return null
+// 记录警告但不阻止API工作
+if (!useServiceRole) {
+  console.warn('SUPABASE_SERVICE_ROLE_KEY not found, using anon key with RLS restrictions')
 }
 
 export async function POST(request: NextRequest) {
-  // 检查Service Role是否可用
-  const serviceCheckResult = checkServiceRoleAvailable()
-  if (serviceCheckResult) {
-    return serviceCheckResult
-  }
-
   try {
     const body = await request.json()
     const { action, data } = body
@@ -68,7 +55,7 @@ async function createOKR(okrData: any) {
     const today = new Date().toISOString().split('T')[0]
     const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseClient
       .from('okrs')
       .insert({
         user_id: okrData.user_id,
@@ -98,7 +85,7 @@ async function createOKR(okrData: any) {
 
 async function createKeyResult(keyResultData: any) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseClient
       .from('key_results')
       .insert({
         okr_id: keyResultData.okr_id,
@@ -131,7 +118,7 @@ async function updateKeyResultProgress(updateData: any) {
     const { keyResultId, currentValue } = updateData
     
     // 获取关键结果信息
-    const { data: keyResult, error: fetchError } = await supabaseAdmin
+    const { data: keyResult, error: fetchError } = await supabaseClient
       .from('key_results')
       .select('*')
       .eq('id', keyResultId)
@@ -148,7 +135,7 @@ async function updateKeyResultProgress(updateData: any) {
     }
 
     // 更新关键结果
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseClient
       .from('key_results')
       .update({
         current_value: currentValue,
@@ -175,7 +162,7 @@ async function deleteOKR(deleteData: any) {
   try {
     const { okrId } = deleteData
     
-    const { error } = await supabaseAdmin
+    const { error } = await supabaseClient
       .from('okrs')
       .delete()
       .eq('id', okrId)
@@ -193,12 +180,6 @@ async function deleteOKR(deleteData: any) {
 }
 
 export async function GET(request: NextRequest) {
-  // 检查Service Role是否可用
-  const serviceCheckResult = checkServiceRoleAvailable()
-  if (serviceCheckResult) {
-    return serviceCheckResult
-  }
-
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
@@ -219,7 +200,7 @@ export async function GET(request: NextRequest) {
 async function getUserOKRs(userId: string) {
   try {
     // 获取OKR数据
-    const { data: okrs, error: okrError } = await supabaseAdmin
+    const { data: okrs, error: okrError } = await supabaseClient
       .from('okrs')
       .select('*')
       .eq('user_id', userId)
@@ -236,7 +217,7 @@ async function getUserOKRs(userId: string) {
 
     // 获取所有OKR的关键结果
     const okrIds = okrs.map(okr => okr.id)
-    const { data: keyResults, error: krError } = await supabaseAdmin
+    const { data: keyResults, error: krError } = await supabaseClient
       .from('key_results')
       .select('*')
       .in('okr_id', okrIds)

@@ -2,8 +2,9 @@
 
 import { supabase, supabaseAdmin } from './supabase'
 
-// 开发环境使用admin客户端绕过RLS
-const dbClient = process.env.NODE_ENV === 'development' ? supabaseAdmin : supabase
+// 始终使用管理员客户端，在生产环境中提供更好的体验
+// supabaseAdmin 在没有service key时会回退到普通客户端
+const dbClient = supabaseAdmin
 
 // 根据实际数据库结构定义类型
 export interface OKR {
