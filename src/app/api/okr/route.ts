@@ -2,17 +2,44 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// 服务端Supabase客户端，绕过RLS
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+// 检查必要的环境变量
+if (!supabaseUrl) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is required')
+}
+
+// 如果没有Service Role Key，使用匿名密钥（受RLS限制）
+const effectiveKey = supabaseServiceKey || supabaseAnonKey
+const useServiceRole = !!supabaseServiceKey
+
+// 创建Supabase客户端
+const supabaseAdmin = createClient(supabaseUrl, effectiveKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   }
 })
 
+// 如果没有Service Role Key，返回错误响应
+function checkServiceRoleAvailable() {
+  if (!useServiceRole) {
+    return NextResponse.json({ 
+      error: 'API暂时不可用，请稍后重试',
+      details: 'Service role key not configured' 
+    }, { status: 503 })
+  }
+  return null
+}
+
 export async function POST(request: NextRequest) {
+  // 检查Service Role是否可用
+  const serviceCheckResult = checkServiceRoleAvailable()
+  if (serviceCheckResult) {
+    return serviceCheckResult
+  }
+
   try {
     const body = await request.json()
     const { action, data } = body
@@ -166,6 +193,12 @@ async function deleteOKR(deleteData: any) {
 }
 
 export async function GET(request: NextRequest) {
+  // 检查Service Role是否可用
+  const serviceCheckResult = checkServiceRoleAvailable()
+  if (serviceCheckResult) {
+    return serviceCheckResult
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')

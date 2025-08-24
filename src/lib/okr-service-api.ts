@@ -63,13 +63,18 @@ export class OKRServiceAPI {
       const result = await response.json()
       
       if (!response.ok) {
+        // 如果是503错误（服务不可用），回退到空数据
+        if (response.status === 503) {
+          console.warn('API服务不可用，返回空数据')
+          return { data: [], error: null }
+        }
         return { data: null, error: result.error || 'Failed to fetch OKRs' }
       }
       
       return { data: result.data, error: null }
     } catch (error) {
       console.error('获取用户OKR异常:', error)
-      return { data: null, error }
+      return { data: [], error: null } // 回退到空数据而不是错误
     }
   }
 
@@ -90,6 +95,10 @@ export class OKRServiceAPI {
       const result = await response.json()
       
       if (!response.ok) {
+        // 如果是503错误，提示用户稍后重试
+        if (response.status === 503) {
+          return { data: null, error: 'API服务暂时不可用，请稍后重试' }
+        }
         return { data: null, error: result.error || 'Failed to create OKR' }
       }
       
