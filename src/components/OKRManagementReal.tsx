@@ -150,6 +150,12 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
         // 显示成功消息
         console.log('✅ OKR已添加到页面，无需刷新')
         
+        // 重新加载统计信息
+        if (user?.id) {
+          const { data: statsData } = await OKRService.getOKRStats(user.id)
+          setStats(statsData)
+        }
+        
         // 显示成功提示
         success('OKR创建成功！', `新目标 "${data.title}" 已添加到列表中`)
       }
@@ -216,6 +222,12 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           unit: ''
         })
         
+        // 重新加载统计信息
+        if (user?.id) {
+          const { data: statsData } = await OKRService.getOKRStats(user.id)
+          setStats(statsData)
+        }
+        
         console.log('✅ 关键结果已添加到页面，无需刷新')
       }
     } catch (error) {
@@ -266,6 +278,12 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           }, 0) / Math.max(1, okr.keyResults.length))
         })))
         
+        // 重新加载统计信息
+        if (user?.id) {
+          const { data: statsData } = await OKRService.getOKRStats(user.id)
+          setStats(statsData)
+        }
+        
         console.log('✅ 进度已更新，无需刷新')
         success('进度更新成功', `当前进度: ${validCurrentValue}`)
       }
@@ -288,6 +306,13 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       } else {
         // 直接从列表中移除OKR，避免重新加载
         setOkrs(prev => prev.filter(okr => okr.id !== okrId))
+        
+        // 重新加载统计信息
+        if (user?.id) {
+          const { data: statsData } = await OKRService.getOKRStats(user.id)
+          setStats(statsData)
+        }
+        
         success('OKR删除成功', '目标已从列表中移除')
         console.log('✅ OKR已从页面移除，无需刷新')
       }
