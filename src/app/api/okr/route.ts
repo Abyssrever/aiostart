@@ -49,52 +49,135 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// 检测数据库表结构并获取可用字段
+async function getTableStructure() {
+  try {
+    const { data: columns } = await supabaseClient
+      .from('information_schema.columns')
+      .select('column_name')
+      .eq('table_schema', 'public')
+      .eq('table_name', 'okrs')
+    
+    if (!columns) return null
+    
+    const columnNames = columns.map(c => c.column_name)
+    return {
+      hasObjectiveType: columnNames.includes('objective_type'),
+      hasCategory: columnNames.includes('category'),
+      hasProgress: columnNames.includes('progress'),
+      hasProgressPercentage: columnNames.includes('progress_percentage'),
+      hasPriority: columnNames.includes('priority'),
+      hasStartDate: columnNames.includes('start_date'),
+      hasEndDate: columnNames.includes('end_date'),
+      hasTargetYear: columnNames.includes('target_year'),
+      hasTargetQuarter: columnNames.includes('target_quarter'),
+      allColumns: columnNames
+    }
+  } catch (error) {
+    console.error('获取表结构失败:', error)
+    return null
+  }
+}
+
 async function createOKR(okrData: any) {
   try {
     console.log('创建OKR请求数据:', okrData)
     
-    // 首先尝试使用完整的字段结构
-    let insertData = {
+    // 检测表结构
+    const structure = await getTableStructure()
+    console.log('数据库表结构:', structure)
+    
+    // 根据表结构动态构建插入数据
+    const insertData: any = {
       user_id: okrData.user_id,
       title: okrData.title,
-      description: okrData.description || null,
-      objective_type: (okrData.objective_type || okrData.category || 'personal') as 'personal' | 'course' | 'college',
-      status: (okrData.status || 'active') as 'draft' | 'active' | 'completed' | 'cancelled',
-      target_year: okrData.target_year || new Date().getFullYear(),
-      target_quarter: okrData.target_quarter || null,
-      progress_percentage: 0
     }
     
-    let { data, error } = await supabaseClient
+    // 只添加存在的字段
+    if (structure) {
+      if (okrData.description !== undefined) insertData.description = okrData.description
+      
+      // 类型字段
+      if (structure.hasObjectiveType) {
+        insertData.objective_type = okrData.objective_type || okrData.category || 'personal'
+      } else if (structure.hasCategory) {
+        insertData.category = okrData.category || 'personal'
+      }
+      
+      // 优先级
+      if (structure.hasPriority) {
+        insertData.priority = okrData.priority || 'medium'
+      }
+      
+      // 状态
+      insertData.status = okrData.status || 'active'
+      
+      // 进度字段
+      if (structure.hasProgressPercentage) {
+        insertData.progress_percentage = 0
+      } else if (structure.hasProgress) {
+        insertData.progress = 0
+      }
+      
+      // 日期字段
+      if (structure.hasStartDate) {
+        insertData.start_date = okrData.start_date
+      }
+      if (structure.hasEndDate) {
+        insertData.end_date = okrData.end_date
+      }
+      
+      // 目标年份和季度
+      if (structure.hasTargetYear) {
+        insertData.target_year = okrData.target_year || new Date().getFullYear()
+      }
+      if (structure.hasTargetQuarter) {
+        insertData.target_quarter = okrData.target_quarter || null
+      }
+    }
+    
+    console.log('准备插入的数据:', insertData)
+    
+    const { data, error } = await supabaseClient
       .from('okrs')
       .insert(insertData)
       .select()
       .single()
 
-    // 如果第一次尝试失败，可能是表结构不匹配，尝试简化版本
-    if (error && error.message.includes('objective_type')) {
-      console.log('尝试使用简化字段结构...')
-      insertData = {
-        user_id: okrData.user_id,
-        title: okrData.title,
-        description: okrData.description || null,
-        status: (okrData.status || 'active') as any,
-        progress_percentage: 0
-      } as any
-      
-      const result = await supabaseClient
-        .from('okrs')
-        .insert(insertData)
-        .select()
-        .single()
-        
-      data = result.data
-      error = result.error
-    }
-
     if (error) {
       console.error('创建OKR数据库错误:', error)
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      
+      // 如果仍然失败，尝试最基础的字段
+      if (error.message.includes('column') && error.message.includes('not found')) {
+        console.log('尝试使用最基础的字段结构...')
+        const basicData = {
+          user_id: okrData.user_id,
+          title: okrData.title,
+          description: okrData.description || null,
+          status: okrData.status || 'active'
+        }
+        
+        const basicResult = await supabaseClient
+          .from('okrs')
+          .insert(basicData)
+          .select()
+          .single()
+          
+        if (basicResult.error) {
+          return NextResponse.json({ 
+            error: `创建失败: ${basicResult.error.message}`,
+            availableColumns: structure?.allColumns || 'unknown'
+          }, { status: 400 })
+        }
+        
+        console.log('使用基础结构创建OKR成功:', basicResult.data)
+        return NextResponse.json({ data: basicResult.data, success: true })
+      }
+      
+      return NextResponse.json({ 
+        error: error.message,
+        availableColumns: structure?.allColumns || 'unknown'
+      }, { status: 400 })
     }
 
     console.log('创建OKR成功:', data)
@@ -205,41 +288,114 @@ async function testConnection() {
   try {
     console.log('测试数据库连接...')
     
-    // 测试表是否存在
-    const { data: tables, error: tableError } = await supabaseClient
+    // 测试基本连接
+    const { data: basicTest, error: basicError } = await supabaseClient
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+      .limit(5)
+    
+    if (basicError) {
+      console.error('基本连接测试失败:', basicError)
+      return NextResponse.json({ 
+        error: '数据库连接失败', 
+        details: basicError.message,
+        step: 'basic_connection'
+      }, { status: 500 })
+    }
+    
+    console.log('基本连接正常，找到表:', basicTest?.map(t => t.table_name))
+    
+    // 测试okrs表是否存在
+    const { data: okrsTable, error: okrsError } = await supabaseClient
       .from('information_schema.tables')
       .select('table_name')
       .eq('table_schema', 'public')
       .eq('table_name', 'okrs')
     
-    if (tableError) {
-      console.error('查询表结构失败:', tableError)
-      return NextResponse.json({ 
-        error: '数据库连接失败', 
-        details: tableError.message 
-      }, { status: 500 })
+    let okrsExists = !okrsError && okrsTable && okrsTable.length > 0
+    console.log('okrs表存在:', okrsExists)
+    
+    // 如果okrs表存在，获取表结构
+    let columns = []
+    if (okrsExists) {
+      const { data: columnData, error: colError } = await supabaseClient
+        .from('information_schema.columns')
+        .select('column_name, data_type, is_nullable, column_default')
+        .eq('table_schema', 'public')
+        .eq('table_name', 'okrs')
+        .order('ordinal_position')
+      
+      if (!colError && columnData) {
+        columns = columnData
+      }
+      console.log('okrs表列:', columns.map(c => c.column_name))
     }
     
-    // 测试查询okrs表结构
-    const { data: columns, error: colError } = await supabaseClient
-      .from('information_schema.columns')
-      .select('column_name, data_type')
+    // 测试key_results表
+    const { data: krTable, error: krError } = await supabaseClient
+      .from('information_schema.tables')
+      .select('table_name')
       .eq('table_schema', 'public')
-      .eq('table_name', 'okrs')
+      .eq('table_name', 'key_results')
     
-    if (colError) {
-      console.error('查询列信息失败:', colError)
+    let keyResultsExists = !krError && krTable && krTable.length > 0
+    console.log('key_results表存在:', keyResultsExists)
+    
+    // 获取所有用户表
+    const { data: userTables } = await supabaseClient
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+      .order('table_name')
+    
+    const allTables = userTables?.map(t => t.table_name) || []
+    
+    const result = {
+      success: true,
+      message: '数据库连接测试完成',
+      connection: {
+        status: '正常',
+        supabaseUrl: supabaseUrl?.substring(0, 30) + '...'
+      },
+      tables: {
+        all: allTables,
+        okrs: {
+          exists: okrsExists,
+          columns: okrsExists ? columns : null
+        },
+        keyResults: {
+          exists: keyResultsExists
+        }
+      },
+      recommendations: []
     }
     
-    return NextResponse.json({ 
-      success: true,
-      message: '数据库连接正常',
-      tablesFound: tables,
-      columns: columns
-    })
+    // 添加建议
+    if (!okrsExists) {
+      result.recommendations.push('需要创建 okrs 表')
+    } else if (columns.length === 0) {
+      result.recommendations.push('无法读取 okrs 表结构，可能权限不足')
+    } else {
+      const hasProgress = columns.some(c => c.column_name === 'progress')
+      const hasProgressPercentage = columns.some(c => c.column_name === 'progress_percentage')
+      if (!hasProgress && !hasProgressPercentage) {
+        result.recommendations.push('okrs 表缺少进度字段 (progress 或 progress_percentage)')
+      }
+    }
+    
+    if (!keyResultsExists) {
+      result.recommendations.push('需要创建 key_results 表')
+    }
+    
+    return NextResponse.json(result)
   } catch (error) {
     console.error('测试连接异常:', error)
-    return NextResponse.json({ error: '测试连接失败' }, { status: 500 })
+    return NextResponse.json({ 
+      error: '测试连接失败', 
+      details: error.message,
+      step: 'exception'
+    }, { status: 500 })
   }
 }
 
