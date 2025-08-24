@@ -317,7 +317,7 @@ async function testConnection() {
     console.log('okrs表存在:', okrsExists)
     
     // 如果okrs表存在，获取表结构
-    let columns = []
+    let columns: Array<{column_name: string, data_type: string, is_nullable: string, column_default: string | null}> = []
     if (okrsExists) {
       const { data: columnData, error: colError } = await supabaseClient
         .from('information_schema.columns')
@@ -368,7 +368,7 @@ async function testConnection() {
           exists: keyResultsExists
         }
       },
-      recommendations: []
+      recommendations: [] as string[]
     }
     
     // 添加建议
@@ -393,7 +393,7 @@ async function testConnection() {
     console.error('测试连接异常:', error)
     return NextResponse.json({ 
       error: '测试连接失败', 
-      details: error.message,
+      details: error instanceof Error ? error.message : String(error),
       step: 'exception'
     }, { status: 500 })
   }
