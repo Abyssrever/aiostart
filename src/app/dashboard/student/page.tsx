@@ -12,6 +12,10 @@ import FloatingAIAssistant from '@/components/FloatingAIAssistant'
 import { StudentOnlyRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
 import { OKRServiceFixed, OKRWithKeyResults } from '@/lib/okr-service-fixed'
+import { OKRServiceProduction } from '@/lib/okr-service-production'
+
+// 动态选择OKR服务
+const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceProduction
 import { ChatService, ChatSession } from '@/lib/chat-service'
 
 
@@ -33,9 +37,9 @@ function StudentDashboardContent() {
     try {
       // 并行加载数据
       const [okrResult, chatResult, statsResult] = await Promise.all([
-        OKRServiceFixed.getUserOKRs(user.id),
+        OKRService.getUserOKRs(user.id),
         ChatService.getUserChatSessions(user.id),
-        OKRServiceFixed.getOKRStats(user.id)
+        OKRService.getOKRStats(user.id)
       ])
       
       if (okrResult.data) setOkrs(okrResult.data)
@@ -48,13 +52,29 @@ function StudentDashboardContent() {
     }
   }
   
-  // 检查URL参数来确定当前标签页
+  // 检查URL参数来确定当前标签页，并在必要时刷新数据
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab === 'okr') {
       setSelectedView('overview')
+    } else if (!tab && user?.id) {
+      // 检查是否从OKR页面返回，如果是则刷新数据
+      const lastOKRPageTimestamp = sessionStorage.getItem('okr_page_timestamp')
+      if (lastOKRPageTimestamp) {
+        // 清除标记并刷新数据
+        sessionStorage.removeItem('okr_page_timestamp')
+        console.log('从OKR页面返回，刷新总览数据')
+        loadDashboardData()
+      }
     }
-  }, [searchParams])
+  }, [searchParams, user?.id])
+
+  // 监听视图切换，当切换到overview时刷新数据
+  useEffect(() => {
+    if (selectedView === 'overview' && user?.id && !searchParams.get('tab')) {
+      loadDashboardData()
+    }
+  }, [selectedView, user?.id, searchParams])
   
   // 加载数据
   useEffect(() => {
@@ -62,6 +82,19 @@ function StudentDashboardContent() {
       loadDashboardData()
     }
   }, [user?.id])
+
+  // 添加页面焦点监听，确保数据同步
+  useEffect(() => {
+    const handleFocus = () => {
+      // 当页面重新获得焦点时，刷新数据（比如从其他标签页返回）
+      if (user?.id && !searchParams.get('tab')) {
+        loadDashboardData()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [user?.id, searchParams])
 
   // 判断是否显示OKR管理组件
   const showOKRManagement = searchParams.get('tab') === 'okr'
@@ -116,7 +149,7 @@ function StudentDashboardContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* 如果是OKR标签页，直接显示OKR管理组件 */}
           {showOKRManagement ? (
-            <OKRManagementReal userRole="student" />
+            <OKRManagementReal userRole="student" onDataChange={loadDashboardData} />
           ) : (
             <>
               {/* 视图切换器 */}
@@ -232,7 +265,11 @@ function StudentDashboardContent() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => router.push('/dashboard/student?tab=okr')}
+                          onClick={() => {
+                            // 保存当前数据状态，以便返回时检查是否需要刷新
+                            sessionStorage.setItem('okr_page_timestamp', Date.now().toString())
+                            router.push('/dashboard/student?tab=okr')
+                          }}
                         >
                           管理OKR
                         </Button>
@@ -248,7 +285,10 @@ function StudentDashboardContent() {
                             <div className="text-gray-400 mb-2">📋</div>
                             <p className="text-gray-600 mb-4">还没有创建OKR目标</p>
                             <Button 
-                              onClick={() => router.push('/dashboard/student?tab=okr')}
+                              onClick={() => {
+                                sessionStorage.setItem('okr_page_timestamp', Date.now().toString())
+                                router.push('/dashboard/student?tab=okr')
+                              }}
                               size="sm"
                             >
                               创建第一个OKR
@@ -292,7 +332,10 @@ function StudentDashboardContent() {
                           <div className="text-center pt-4">
                             <Button 
                               variant="outline" 
-                              onClick={() => router.push('/dashboard/student?tab=okr')}
+                              onClick={() => {
+                                sessionStorage.setItem('okr_page_timestamp', Date.now().toString())
+                                router.push('/dashboard/student?tab=okr')
+                              }}
                               size="sm"
                             >
                               查看全部 {okrs.length} 个OKR
@@ -501,7 +544,10 @@ function StudentDashboardContent() {
                             <div className="text-gray-400 mb-2">📚</div>
                             <p className="text-gray-600 mb-4">还没有OKR目标</p>
                             <p className="text-sm text-gray-500 mb-4">创建OKR目标后，AI将为你生成个性化学习建议</p>
-                            <Button onClick={() => router.push('/dashboard/student?tab=okr')}>
+                            <Button onClick={() => {
+                              sessionStorage.setItem('okr_page_timestamp', Date.now().toString())
+                              router.push('/dashboard/student?tab=okr')
+                            }}>
                               创建第一个OKR
                             </Button>
                           </div>

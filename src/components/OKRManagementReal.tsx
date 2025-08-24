@@ -22,9 +22,10 @@ const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OK
 
 interface OKRManagementRealProps {
   userRole?: 'student' | 'teacher' | 'admin'
+  onDataChange?: () => void // 数据变化回调
 }
 
-export default function OKRManagementReal({ userRole = 'student' }: OKRManagementRealProps) {
+export default function OKRManagementReal({ userRole = 'student', onDataChange }: OKRManagementRealProps) {
   const { user } = useAuth()
   const { success, error: showError } = useToast()
   const [okrs, setOkrs] = useState<OKRWithKeyResults[]>([])
@@ -156,6 +157,9 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           setStats(statsData)
         }
         
+        // 通知父组件数据发生变化
+        onDataChange?.()
+        
         // 显示成功提示
         success('OKR创建成功！', `新目标 "${data.title}" 已添加到列表中`)
       }
@@ -228,6 +232,9 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           setStats(statsData)
         }
         
+        // 通知父组件数据发生变化
+        onDataChange?.()
+        
         console.log('✅ 关键结果已添加到页面，无需刷新')
       }
     } catch (error) {
@@ -284,6 +291,9 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           setStats(statsData)
         }
         
+        // 通知父组件数据发生变化
+        onDataChange?.()
+        
         console.log('✅ 进度已更新，无需刷新')
         success('进度更新成功', `当前进度: ${validCurrentValue}`)
       }
@@ -312,6 +322,9 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           const { data: statsData } = await OKRService.getOKRStats(user.id)
           setStats(statsData)
         }
+        
+        // 通知父组件数据发生变化
+        onDataChange?.()
         
         success('OKR删除成功', '目标已从列表中移除')
         console.log('✅ OKR已从页面移除，无需刷新')
