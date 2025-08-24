@@ -73,17 +73,20 @@ function StudentDashboardContent() {
     
   // 计算累计学习天数
   const getCumulativeStudyDays = () => {
-    if (!user?.created_at) return 0
+    if (!user?.created_at) {
+      // 如果没有创建时间，使用默认值（假设注册30天）
+      return 30
+    }
     try {
       // 计算从注册到现在的天数
       const registrationDate = new Date(user.created_at)
       const today = new Date()
       const diffTime = today.getTime() - registrationDate.getTime()
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      return diffDays
+      return Math.max(1, diffDays) // 至少显示1天
     } catch (error) {
       console.error('计算累计学习天数失败:', error)
-      return 0
+      return 30 // 默认显示30天
     }
   }
   

@@ -15,6 +15,8 @@ export interface User {
   grade?: number
   major?: string
   class_name?: string
+  created_at?: string
+  updated_at?: string
 }
 
 // 认证上下文接口
