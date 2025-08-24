@@ -14,7 +14,11 @@ import { Plus, Edit, Trash2, Target, CheckCircle, Clock, AlertTriangle } from 'l
 
 import { useAuth } from '@/contexts/AuthContext'
 import { OKRServiceFixed, OKRWithKeyResults, NewOKR, NewKeyResult } from '@/lib/okr-service-fixed'
+import { OKRServiceAPI } from '@/lib/okr-service-api'
 import { useToast, ToastContainer } from '@/components/ui/toast'
+
+// 根据环境选择服务
+const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceAPI
 
 interface OKRManagementRealProps {
   userRole?: 'student' | 'teacher' | 'admin'
@@ -59,7 +63,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
     
     setLoading(true)
     try {
-      const { data, error } = await OKRServiceFixed.getUserOKRs(user.id)
+      const { data, error } = await OKRService.getUserOKRs(user.id)
       if (error) {
         console.error('加载OKR失败:', error)
       } else {
@@ -67,7 +71,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       }
 
       // 加载统计信息
-      const { data: statsData } = await OKRServiceFixed.getOKRStats(user.id)
+      const { data: statsData } = await OKRService.getOKRStats(user.id)
       setStats(statsData)
     } catch (error) {
       console.error('加载OKR异常:', error)
@@ -102,7 +106,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
         end_date: newOKR.end_date!
       }
 
-      const { data, error } = await OKRServiceFixed.createOKR(okrData)
+      const { data, error } = await OKRService.createOKR(okrData)
       
       if (error) {
         console.error('创建OKR失败:', error)
@@ -184,7 +188,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
         unit: newKeyResult.unit || ''
       }
 
-      const { data, error } = await OKRServiceFixed.createKeyResult(keyResultData)
+      const { data, error } = await OKRService.createKeyResult(keyResultData)
       
       if (error) {
         console.error('创建关键结果失败:', error)
@@ -225,7 +229,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
     console.log('前端开始更新进度:', { keyResultId, currentValue })
     
     try {
-      const result = await OKRServiceFixed.updateKeyResultProgress(keyResultId, currentValue)
+      const result = await OKRService.updateKeyResultProgress(keyResultId, currentValue)
       console.log('更新进度服务返回:', result)
       
       if (result.error) {
@@ -276,7 +280,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
     if (!confirm('确定要删除这个OKR吗？此操作不可撤销。')) return
 
     try {
-      const { error } = await OKRServiceFixed.deleteOKR(okrId)
+      const { error } = await OKRService.deleteOKR(okrId)
       
       if (error) {
         console.error('删除OKR失败:', error)

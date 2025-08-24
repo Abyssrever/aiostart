@@ -63,11 +63,12 @@ export function Toast({
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 max-w-sm w-full transition-all duration-300 transform ${
+      className={`fixed top-4 right-4 z-50 max-w-sm w-full min-w-80 transition-all duration-300 transform ${
         show 
           ? 'translate-x-0 opacity-100 scale-100' 
           : 'translate-x-full opacity-0 scale-95'
       }`}
+      style={{ right: '1rem' }} // 确保右侧对齐
     >
       <div className={`rounded-lg p-4 ${getStyles()}`}>
         <div className="flex items-start">
@@ -184,7 +185,7 @@ export function ToastContainer() {
   }
   
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full" style={{ right: '1rem', width: '320px' }}>
       {toasts.map((toast, index) => (
         <div
           key={toast.id}
