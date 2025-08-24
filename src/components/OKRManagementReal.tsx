@@ -14,6 +14,7 @@ import { Plus, Edit, Trash2, Target, CheckCircle, Clock, AlertTriangle } from 'l
 
 import { useAuth } from '@/contexts/AuthContext'
 import { OKRServiceFixed, OKRWithKeyResults, NewOKR, NewKeyResult } from '@/lib/okr-service-fixed'
+import { useToast, ToastContainer } from '@/components/ui/toast'
 
 interface OKRManagementRealProps {
   userRole?: 'student' | 'teacher' | 'admin'
@@ -21,6 +22,7 @@ interface OKRManagementRealProps {
 
 export default function OKRManagementReal({ userRole = 'student' }: OKRManagementRealProps) {
   const { user } = useAuth()
+  const { success, error: showError } = useToast()
   const [okrs, setOkrs] = useState<OKRWithKeyResults[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOKR, setSelectedOKR] = useState<OKRWithKeyResults | null>(null)
@@ -28,6 +30,9 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isKeyResultDialogOpen, setIsKeyResultDialogOpen] = useState(false)
   const [stats, setStats] = useState<any>(null)
+  const [newlyCreatedOKRId, setNewlyCreatedOKRId] = useState<string | null>(null)
+  const [okrValidationError, setOkrValidationError] = useState<string>('')
+  const [keyResultValidationError, setKeyResultValidationError] = useState<string>('')
   
   // 新OKR表单状态
   const [newOKR, setNewOKR] = useState<Partial<NewOKR>>({
@@ -73,7 +78,17 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
 
   // 创建新OKR
   const handleCreateOKR = async () => {
-    if (!user?.id || !newOKR.title) return
+    if (!user?.id) return
+    
+    // 验证必填字段
+    if (!newOKR.title?.trim()) {
+      setOkrValidationError('请填写目标标题')
+      showError('请输入目标标题', '目标标题不能为空')
+      return
+    }
+    
+    // 清除验证错误
+    setOkrValidationError('')
 
     try {
       const okrData: NewOKR = {
@@ -91,10 +106,30 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       
       if (error) {
         console.error('创建OKR失败:', error)
-        alert('创建OKR失败，请重试')
+        showError('创建OKR失败', '请检查网络连接后重试')
       } else {
         console.log('OKR创建成功:', data)
+        
+        // 创建新的OKR对象，包含空的关键结果数组
+        const newOKRWithKeyResults: OKRWithKeyResults = {
+          ...data,
+          keyResults: []
+        }
+        
+        // 直接添加到当前OKR列表的顶部，避免重新加载
+        setOkrs(prev => [newOKRWithKeyResults, ...prev])
+        
+        // 设置新创建的OKR ID用于高亮显示
+        setNewlyCreatedOKRId(data.id)
+        
+        // 3秒后清除高亮效果
+        setTimeout(() => {
+          setNewlyCreatedOKRId(null)
+        }, 3000)
+        
+        // 关闭对话框
         setIsCreateDialogOpen(false)
+        
         // 重置表单状态并确保日期字段有值
         const today = new Date().toISOString().split('T')[0]
         const endDate = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -107,17 +142,38 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           start_date: today,
           end_date: endDate
         })
-        loadOKRs() // 重新加载数据
+        
+        // 显示成功消息
+        console.log('✅ OKR已添加到页面，无需刷新')
+        
+        // 显示成功提示
+        success('OKR创建成功！', `新目标 "${data.title}" 已添加到列表中`)
       }
     } catch (error) {
       console.error('创建OKR异常:', error)
-      alert('创建OKR失败，请重试')
+      showError('创建OKR失败', '系统异常，请重试')
     }
   }
 
   // 添加关键结果
   const handleCreateKeyResult = async () => {
-    if (!selectedOKR?.id || !newKeyResult.title) return
+    if (!selectedOKR?.id) return
+    
+    // 验证必填字段
+    if (!newKeyResult.title?.trim()) {
+      setKeyResultValidationError('请填写关键结果标题')
+      showError('请输入关键结果标题', '关键结果标题不能为空')
+      return
+    }
+    
+    if (!newKeyResult.target_value || newKeyResult.target_value <= 0) {
+      setKeyResultValidationError('请填写有效的目标值')
+      showError('请输入有效的目标值', '目标值必须大于0')
+      return
+    }
+    
+    // 清除验证错误
+    setKeyResultValidationError('')
 
     try {
       const keyResultData: NewKeyResult = {
@@ -132,8 +188,22 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       
       if (error) {
         console.error('创建关键结果失败:', error)
-        alert('创建关键结果失败，请重试')
+        showError('创建关键结果失败', '请检查输入信息后重试')
       } else {
+        console.log('关键结果创建成功:', data)
+        
+        // 直接更新对应OKR的关键结果列表，避免重新加载
+        setOkrs(prev => prev.map(okr => {
+          if (okr.id === selectedOKR?.id) {
+            return {
+              ...okr,
+              keyResults: [...okr.keyResults, data]
+            }
+          }
+          return okr
+        }))
+        
+        // 关闭对话框并重置表单
         setIsKeyResultDialogOpen(false)
         setNewKeyResult({
           title: '',
@@ -141,28 +211,63 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           target_value: 0,
           unit: ''
         })
-        loadOKRs() // 重新加载数据
+        
+        console.log('✅ 关键结果已添加到页面，无需刷新')
       }
     } catch (error) {
       console.error('创建关键结果异常:', error)
-      alert('创建关键结果失败，请重试')
+      showError('创建关键结果失败', '系统异常，请重试')
     }
   }
 
   // 更新关键结果进度
   const handleUpdateKeyResultProgress = async (keyResultId: string, currentValue: number) => {
+    console.log('前端开始更新进度:', { keyResultId, currentValue })
+    
     try {
-      const { error } = await OKRServiceFixed.updateKeyResultProgress(keyResultId, currentValue)
+      const result = await OKRServiceFixed.updateKeyResultProgress(keyResultId, currentValue)
+      console.log('更新进度服务返回:', result)
       
-      if (error) {
-        console.error('更新进度失败:', error)
-        alert('更新进度失败，请重试')
+      if (result.error) {
+        console.error('更新进度失败:', result.error)
+        showError('更新进度失败', '请检查数值后重试')
       } else {
-        loadOKRs() // 重新加载数据
+        // 直接更新对应关键结果的进度，避免重新加载
+        const validCurrentValue = Math.max(0, currentValue)
+        setOkrs(prev => prev.map(okr => ({
+          ...okr,
+          keyResults: okr.keyResults.map(kr => {
+            if (kr.id === keyResultId) {
+              const progressPercentage = kr.target_value && kr.target_value > 0 
+                ? Math.max(0, Math.min((validCurrentValue / kr.target_value) * 100, 100))
+                : 0
+              return {
+                ...kr,
+                current_value: validCurrentValue,
+                progress: Math.round(progressPercentage),
+                status: progressPercentage >= 100 ? 'completed' : 'active'
+              }
+            }
+            return kr
+          }),
+          // 重新计算OKR整体进度
+          progress: Math.round(okr.keyResults.reduce((sum, kr) => {
+            if (kr.id === keyResultId) {
+              const progressPercentage = kr.target_value && kr.target_value > 0 
+                ? Math.max(0, Math.min((validCurrentValue / kr.target_value) * 100, 100))
+                : 0
+              return sum + progressPercentage
+            }
+            return sum + (kr.progress || 0)
+          }, 0) / Math.max(1, okr.keyResults.length))
+        })))
+        
+        console.log('✅ 进度已更新，无需刷新')
+        success('进度更新成功', `当前进度: ${validCurrentValue}`)
       }
     } catch (error) {
       console.error('更新进度异常:', error)
-      alert('更新进度失败，请重试')
+      showError('更新进度失败', '系统异常，请重试')
     }
   }
 
@@ -175,13 +280,16 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
       
       if (error) {
         console.error('删除OKR失败:', error)
-        alert('删除OKR失败，请重试')
+        showError('删除OKR失败', '请稍后重试')
       } else {
-        loadOKRs() // 重新加载数据
+        // 直接从列表中移除OKR，避免重新加载
+        setOkrs(prev => prev.filter(okr => okr.id !== okrId))
+        success('OKR删除成功', '目标已从列表中移除')
+        console.log('✅ OKR已从页面移除，无需刷新')
       }
     } catch (error) {
       console.error('删除OKR异常:', error)
-      alert('删除OKR失败，请重试')
+      showError('删除OKR失败', '系统异常，请重试')
     }
   }
 
@@ -218,7 +326,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-150 active:bg-blue-800">
                   <Plus className="w-4 h-4 mr-2" />
                   创建新OKR
                 </Button>
@@ -236,8 +344,12 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                     <Input
                       id="title"
                       value={newOKR.title || ''}
-                      onChange={(e) => setNewOKR(prev => ({ ...prev, title: e.target.value }))}
+                      onChange={(e) => {
+                        setNewOKR(prev => ({ ...prev, title: e.target.value }))
+                        if (okrValidationError) setOkrValidationError('')
+                      }}
                       placeholder="例如：提升编程能力，为实习做准备"
+                      className={okrValidationError ? 'border-red-500 focus:border-red-500' : ''}
                     />
                   </div>
                   <div>
@@ -283,11 +395,22 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                       </Select>
                     </div>
                   </div>
+                  {okrValidationError && (
+                    <div className="text-red-600 text-sm font-medium mb-2">
+                      {okrValidationError}
+                    </div>
+                  )}
                   <div className="flex justify-end space-x-2 pt-4">
-                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    <Button variant="outline" onClick={() => {
+                      setIsCreateDialogOpen(false)
+                      setOkrValidationError('')
+                    }}>
                       取消
                     </Button>
-                    <Button onClick={handleCreateOKR}>
+                    <Button 
+                      onClick={handleCreateOKR}
+                      className="bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-150 active:bg-blue-800"
+                    >
                       创建OKR
                     </Button>
                   </div>
@@ -351,7 +474,10 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                   <Target className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">还没有OKR目标</h3>
                   <p className="text-gray-600 mb-6">开始创建你的第一个OKR目标，规划学习和成长路径</p>
-                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Button 
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-150 active:bg-blue-800"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     创建新OKR
                   </Button>
@@ -360,7 +486,14 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
             </Card>
           ) : (
             okrs.map((okr) => (
-              <Card key={okr.id} className="border-l-4 border-l-blue-500">
+              <Card 
+                key={okr.id} 
+                className={`border-l-4 transition-all duration-500 ${
+                  newlyCreatedOKRId === okr.id 
+                    ? 'border-l-green-500 bg-green-50 shadow-lg scale-[1.02]' 
+                    : 'border-l-blue-500'
+                }`}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -389,6 +522,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteOKR(okr.id)}
+                        className="hover:bg-red-50 hover:border-red-200 active:scale-95 transition-all duration-150 active:bg-red-100"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -405,6 +539,7 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                             variant="outline" 
                             size="sm"
                             onClick={() => setSelectedOKR(okr)}
+                            className="hover:bg-blue-50 active:scale-95 transition-all duration-150 active:bg-blue-100"
                           >
                             <Plus className="w-4 h-4 mr-1" />
                             添加关键结果
@@ -423,8 +558,12 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                               <Input
                                 id="kr-title"
                                 value={newKeyResult.title || ''}
-                                onChange={(e) => setNewKeyResult(prev => ({ ...prev, title: e.target.value }))}
+                                onChange={(e) => {
+                                  setNewKeyResult(prev => ({ ...prev, title: e.target.value }))
+                                  if (keyResultValidationError) setKeyResultValidationError('')
+                                }}
                                 placeholder="例如：完成3个个人项目"
+                                className={keyResultValidationError ? 'border-red-500 focus:border-red-500' : ''}
                               />
                             </div>
                             <div>
@@ -443,7 +582,11 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                                   id="kr-target"
                                   type="number"
                                   value={newKeyResult.target_value || 0}
-                                  onChange={(e) => setNewKeyResult(prev => ({ ...prev, target_value: parseFloat(e.target.value) || 0 }))}
+                                  onChange={(e) => {
+                                    setNewKeyResult(prev => ({ ...prev, target_value: parseFloat(e.target.value) || 0 }))
+                                    if (keyResultValidationError) setKeyResultValidationError('')
+                                  }}
+                                  className={keyResultValidationError ? 'border-red-500 focus:border-red-500' : ''}
                                 />
                               </div>
                               <div>
@@ -456,11 +599,22 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                                 />
                               </div>
                             </div>
+                            {keyResultValidationError && (
+                              <div className="text-red-600 text-sm font-medium mb-2">
+                                {keyResultValidationError}
+                              </div>
+                            )}
                             <div className="flex justify-end space-x-2 pt-4">
-                              <Button variant="outline" onClick={() => setIsKeyResultDialogOpen(false)}>
+                              <Button variant="outline" onClick={() => {
+                                setIsKeyResultDialogOpen(false)
+                                setKeyResultValidationError('')
+                              }}>
                                 取消
                               </Button>
-                              <Button onClick={handleCreateKeyResult}>
+                              <Button 
+                                onClick={handleCreateKeyResult}
+                                className="bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-150 active:bg-blue-800"
+                              >
                                 添加关键结果
                               </Button>
                             </div>
@@ -490,8 +644,8 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
                               </div>
                             </div>
                             <div className="ml-4 text-right">
-                              <div className="text-lg font-bold text-gray-900">{kr.progress_percentage}%</div>
-                              <Progress value={kr.progress_percentage} className="w-16 mt-1" />
+                              <div className="text-lg font-bold text-gray-900">{kr.progress}%</div>
+                              <Progress value={kr.progress} className="w-16 mt-1" />
                               <div className="mt-2">
                                 <Input
                                   type="number"
@@ -532,6 +686,9 @@ export default function OKRManagementReal({ userRole = 'student' }: OKRManagemen
           )}
         </div>
       </div>
+      
+      {/* Toast通知容器 */}
+      <ToastContainer />
     </div>
   )
 }
