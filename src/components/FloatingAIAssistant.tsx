@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { X, MessageCircle, Minimize2, Maximize2 } from 'lucide-react'
-import AIDialogWindow from './AIDialogWindow'
+import AIDialogWindowReal from './AIDialogWindowReal'
 
 interface ChatMessage {
   id: string
@@ -273,15 +273,10 @@ const FloatingAIAssistant: React.FC<FloatingAIAssistantProps> = ({ chatHistory }
       )}
 
       {/* AI对话窗口 */}
-      <AIDialogWindow
+      <AIDialogWindowReal
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        initialMessages={chatHistory.map(chat => ({
-          id: chat.id,
-          type: chat.type,
-          content: chat.content,
-          timestamp: chat.timestamp
-        }))}
+        sessionType="general"
       />
     </>
   )
