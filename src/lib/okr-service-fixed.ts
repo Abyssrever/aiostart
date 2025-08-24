@@ -1,67 +1,11 @@
 'use client'
 
 import { supabase, supabaseAdmin } from './supabase'
+import { OKR, KeyResult, NewOKR, NewKeyResult, OKRWithKeyResults } from '@/types/okr'
 
 // 始终使用管理员客户端，在生产环境中提供更好的体验
 // supabaseAdmin 在没有service key时会回退到普通客户端
 const dbClient = supabaseAdmin
-
-// 根据实际数据库结构定义类型
-export interface OKR {
-  id: string
-  user_id: string
-  title: string
-  description: string | null
-  category: 'personal' | 'academic' | 'skill' | string
-  priority: 'low' | 'medium' | 'high'
-  status: 'draft' | 'active' | 'completed' | 'paused'
-  start_date: string
-  end_date: string
-  progress: number
-  parent_okr_id: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface KeyResult {
-  id: string
-  okr_id: string
-  title: string
-  description: string | null
-  target_value: number | null
-  current_value: number
-  unit: string | null
-  progress: number
-  status: 'active' | 'completed' | 'at_risk' | 'blocked'
-  measurement_type: string
-  created_at: string
-  updated_at: string
-}
-
-export interface NewOKR {
-  user_id: string
-  title: string
-  description?: string
-  category?: string
-  priority?: string
-  status?: string
-  start_date: string
-  end_date: string
-}
-
-export interface NewKeyResult {
-  okr_id: string
-  title: string
-  description?: string
-  target_value?: number
-  current_value?: number
-  unit?: string
-}
-
-// OKR with Key Results
-export interface OKRWithKeyResults extends OKR {
-  keyResults: KeyResult[]
-}
 
 // OKR操作服务
 export class OKRServiceFixed {

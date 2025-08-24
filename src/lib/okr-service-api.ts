@@ -1,57 +1,6 @@
 'use client'
 
-// API-based OKR Service for production environment
-export interface OKR {
-  id: string
-  user_id: string
-  title: string
-  description: string | null
-  objective_type: 'personal' | 'course' | 'college'
-  parent_okr_id: string | null
-  target_quarter: string | null
-  target_year: number
-  status: 'draft' | 'active' | 'completed' | 'cancelled'
-  progress_percentage: number
-  created_at: string
-  updated_at: string
-}
-
-export interface KeyResult {
-  id: string
-  okr_id: string
-  title: string
-  description: string | null
-  target_value: number | null
-  current_value: number
-  unit: string | null
-  measurement_type: 'numeric' | 'boolean' | 'percentage'
-  status: 'active' | 'completed' | 'at_risk' | 'blocked'
-  progress_percentage: number
-  created_at: string
-  updated_at: string
-}
-
-export interface NewOKR {
-  user_id: string
-  title: string
-  description?: string
-  objective_type?: 'personal' | 'course' | 'college'
-  status?: 'draft' | 'active' | 'completed' | 'cancelled'
-  target_year?: number
-  target_quarter?: string
-}
-
-export interface NewKeyResult {
-  okr_id: string
-  title: string
-  description?: string
-  target_value?: number
-  unit?: string
-}
-
-export interface OKRWithKeyResults extends OKR {
-  keyResults: KeyResult[]
-}
+import { OKR, KeyResult, NewOKR, NewKeyResult, OKRWithKeyResults } from '@/types/okr'
 
 export class OKRServiceAPI {
   // 获取用户的所有OKR
@@ -208,7 +157,7 @@ export class OKRServiceAPI {
       )
 
       const averageProgress = totalOKRs > 0 
-        ? Math.round(okrs.reduce((sum, okr) => sum + okr.progress_percentage, 0) / totalOKRs)
+        ? Math.round(okrs.reduce((sum, okr) => sum + (okr.progress_percentage || okr.progress || 0), 0) / totalOKRs)
         : 0
 
       const stats = {

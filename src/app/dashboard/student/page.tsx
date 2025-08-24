@@ -11,8 +11,9 @@ import OKRManagementReal from '@/components/OKRManagementReal'
 import FloatingAIAssistant from '@/components/FloatingAIAssistant'
 import { StudentOnlyRoute } from '@/components/ProtectedRoute'
 import { useAuth } from '@/contexts/AuthContext'
-import { OKRServiceFixed, OKRWithKeyResults } from '@/lib/okr-service-fixed'
+import { OKRServiceFixed } from '@/lib/okr-service-fixed'
 import { OKRServiceAPI } from '@/lib/okr-service-api'
+import { OKRWithKeyResults } from '@/types/okr'
 
 // 动态选择OKR服务 - 优先使用API服务，开发环境可回退到Fixed服务
 const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceAPI
@@ -101,7 +102,7 @@ function StudentDashboardContent() {
 
   // 计算总体进度（基于真实OKR数据）
   const overallProgress = okrs && okrs.length > 0 
-    ? Math.round(okrs.reduce((sum, okr) => sum + (okr.progress || 0), 0) / okrs.length)
+    ? Math.round(okrs.reduce((sum, okr) => sum + (okr.progress || okr.progress_percentage || 0), 0) / okrs.length)
     : 0
     
   // 计算累计学习天数
@@ -315,12 +316,12 @@ function StudentDashboardContent() {
                                   }>
                                     {okr.status === 'completed' ? '已完成' : okr.status === 'active' ? '进行中' : okr.status}
                                   </Badge>
-                                  <span className="text-sm text-gray-500">截止: {new Date(okr.end_date).toLocaleDateString()}</span>
+                                  <span className="text-sm text-gray-500">截止: {okr.end_date ? new Date(okr.end_date).toLocaleDateString() : '无'}</span>
                                 </div>
                               </div>
                               <div className="ml-4 text-right">
-                                <div className="text-2xl font-bold text-gray-900">{okr.progress}%</div>
-                                <Progress value={okr.progress} className="w-20 mt-1" />
+                                <div className="text-2xl font-bold text-gray-900">{okr.progress || okr.progress_percentage || 0}%</div>
+                                <Progress value={okr.progress || okr.progress_percentage || 0} className="w-20 mt-1" />
                                 <div className="text-xs text-gray-500 mt-1">
                                   {okr.keyResults?.length || 0} 关键结果
                                 </div>
@@ -553,9 +554,10 @@ function StudentDashboardContent() {
                           </div>
                         ) : (
                           okrs.map((okr) => {
-                            const needsAttention = okr.progress < 30
-                            const isOnTrack = okr.progress >= 30 && okr.progress < 80
-                            const isExcellent = okr.progress >= 80
+                            const progress = okr.progress || okr.progress_percentage || 0
+                            const needsAttention = progress < 30
+                            const isOnTrack = progress >= 30 && progress < 80
+                            const isExcellent = progress >= 80
                             
                             return (
                               <div key={okr.id} className="border rounded-lg p-6 space-y-4">
@@ -563,8 +565,8 @@ function StudentDashboardContent() {
                                   <div className="flex-1">
                                     <h3 className="font-semibold text-gray-900 mb-2">{okr.title}</h3>
                                     <div className="flex items-center space-x-2 mb-3">
-                                      <Progress value={okr.progress} className="flex-1" />
-                                      <span className="text-sm font-medium">{okr.progress}%</span>
+                                      <Progress value={progress} className="flex-1" />
+                                      <span className="text-sm font-medium">{progress}%</span>
                                     </div>
                                   </div>
                                 </div>
@@ -611,19 +613,22 @@ function StudentDashboardContent() {
                                 {okr.keyResults && okr.keyResults.length > 0 && (
                                   <div className="space-y-2">
                                     <h5 className="font-medium text-gray-700">关键结果建议:</h5>
-                                    {okr.keyResults.map((kr) => (
-                                      <div key={kr.id} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
-                                        <span>{kr.title}</span>
-                                        <div className="flex items-center space-x-2">
-                                          <span className="text-gray-600">{kr.current_value}/{kr.target_value} {kr.unit}</span>
-                                          <Badge className={kr.progress >= 80 ? 'bg-green-100 text-green-800' : 
-                                                          kr.progress >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                                                          'bg-red-100 text-red-800'}>
-                                            {kr.progress >= 80 ? '优秀' : kr.progress >= 50 ? '正常' : '落后'}
-                                          </Badge>
+                                    {okr.keyResults.map((kr) => {
+                                      const krProgress = kr.progress || kr.progress_percentage || 0
+                                      return (
+                                        <div key={kr.id} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                                          <span>{kr.title}</span>
+                                          <div className="flex items-center space-x-2">
+                                            <span className="text-gray-600">{kr.current_value}/{kr.target_value} {kr.unit}</span>
+                                            <Badge className={krProgress >= 80 ? 'bg-green-100 text-green-800' : 
+                                                            krProgress >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-red-100 text-red-800'}>
+                                              {krProgress >= 80 ? '优秀' : krProgress >= 50 ? '正常' : '落后'}
+                                            </Badge>
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      )
+                                    })}
                                   </div>
                                 )}
                               </div>

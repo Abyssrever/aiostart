@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, Target, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { OKRServiceFixed, OKRWithKeyResults, NewOKR, NewKeyResult } from '@/lib/okr-service-fixed'
+import { OKRServiceFixed } from '@/lib/okr-service-fixed'
 import { OKRServiceAPI } from '@/lib/okr-service-api'
+import { OKRWithKeyResults, NewOKR, NewKeyResult } from '@/types/okr'
 import { useToast, ToastContainer } from '@/components/ui/toast'
 
 // 动态选择服务：开发环境用Fixed服务，生产环境用API服务
@@ -281,7 +282,7 @@ export default function OKRManagementReal({ userRole = 'student', onDataChange }
                 : 0
               return sum + progressPercentage
             }
-            return sum + (kr.progress || 0)
+            return sum + (kr.progress || kr.progress_percentage || 0)
           }, 0) / Math.max(1, okr.keyResults.length))
         })))
         
@@ -550,15 +551,15 @@ export default function OKRManagementReal({ userRole = 'student', onDataChange }
                         {okr.description}
                       </CardDescription>
                       <div className="flex items-center mt-2 space-x-4 text-sm text-gray-500">
-                        <span>类型: {okr.category === 'personal' ? '个人' : okr.category === 'course' ? '课程' : '学院'}</span>
-                        <span>截止: {new Date(okr.end_date).toLocaleDateString()}</span>
+                        <span>类型: {(okr.category || okr.objective_type) === 'personal' ? '个人' : (okr.category || okr.objective_type) === 'course' ? '课程' : '学院'}</span>
+                        <span>截止: {okr.end_date ? new Date(okr.end_date).toLocaleDateString() : '无'}</span>
                         <span>创建: {new Date(okr.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2 ml-4">
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900">{okr.progress}%</div>
-                        <Progress value={okr.progress} className="w-20 mt-1" />
+                        <div className="text-2xl font-bold text-gray-900">{okr.progress || okr.progress_percentage || 0}%</div>
+                        <Progress value={okr.progress || okr.progress_percentage || 0} className="w-20 mt-1" />
                       </div>
                       <Button
                         variant="outline"
@@ -686,8 +687,8 @@ export default function OKRManagementReal({ userRole = 'student', onDataChange }
                               </div>
                             </div>
                             <div className="ml-4 text-right">
-                              <div className="text-lg font-bold text-gray-900">{kr.progress}%</div>
-                              <Progress value={kr.progress} className="w-16 mt-1" />
+                              <div className="text-lg font-bold text-gray-900">{kr.progress || kr.progress_percentage || 0}%</div>
+                              <Progress value={kr.progress || kr.progress_percentage || 0} className="w-16 mt-1" />
                               <div className="mt-2">
                                 <Input
                                   type="number"
