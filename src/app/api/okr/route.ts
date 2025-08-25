@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { buildInsertData, analyzeDBError } from '@/lib/validation'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -87,54 +88,8 @@ async function createOKR(okrData: any) {
     const structure = await getTableStructure()
     console.log('数据库表结构:', structure)
     
-    // 根据表结构动态构建插入数据
-    const insertData: any = {
-      user_id: okrData.user_id,
-      title: okrData.title,
-    }
-    
-    // 只添加存在的字段
-    if (structure) {
-      if (okrData.description !== undefined) insertData.description = okrData.description
-      
-      // 类型字段
-      if (structure.hasObjectiveType) {
-        insertData.objective_type = okrData.objective_type || okrData.category || 'personal'
-      } else if (structure.hasCategory) {
-        insertData.category = okrData.category || 'personal'
-      }
-      
-      // 优先级
-      if (structure.hasPriority) {
-        insertData.priority = okrData.priority || 'medium'
-      }
-      
-      // 状态
-      insertData.status = okrData.status || 'active'
-      
-      // 进度字段
-      if (structure.hasProgressPercentage) {
-        insertData.progress_percentage = 0
-      } else if (structure.hasProgress) {
-        insertData.progress = 0
-      }
-      
-      // 日期字段
-      if (structure.hasStartDate) {
-        insertData.start_date = okrData.start_date
-      }
-      if (structure.hasEndDate) {
-        insertData.end_date = okrData.end_date
-      }
-      
-      // 目标年份和季度
-      if (structure.hasTargetYear) {
-        insertData.target_year = okrData.target_year || new Date().getFullYear()
-      }
-      if (structure.hasTargetQuarter) {
-        insertData.target_quarter = okrData.target_quarter || null
-      }
-    }
+    // 使用验证工具构建插入数据
+    const insertData = buildInsertData(okrData, structure)
     
     console.log('准备插入的数据:', insertData)
     
@@ -147,35 +102,15 @@ async function createOKR(okrData: any) {
     if (error) {
       console.error('创建OKR数据库错误:', error)
       
-      // 如果仍然失败，尝试最基础的字段
-      if (error.message.includes('column') && error.message.includes('not found')) {
-        console.log('尝试使用最基础的字段结构...')
-        const basicData = {
-          user_id: okrData.user_id,
-          title: okrData.title,
-          description: okrData.description || null,
-          status: okrData.status || 'active'
-        }
-        
-        const basicResult = await supabaseClient
-          .from('okrs')
-          .insert(basicData)
-          .select()
-          .single()
-          
-        if (basicResult.error) {
-          return NextResponse.json({ 
-            error: `创建失败: ${basicResult.error.message}`,
-            availableColumns: structure?.allColumns || 'unknown'
-          }, { status: 400 })
-        }
-        
-        console.log('使用基础结构创建OKR成功:', basicResult.data)
-        return NextResponse.json({ data: basicResult.data, success: true })
-      }
+      // 使用错误分析工具
+      const errorAnalysis = analyzeDBError(error)
+      console.log('错误分析:', errorAnalysis)
       
       return NextResponse.json({ 
         error: error.message,
+        errorType: errorAnalysis.type,
+        field: errorAnalysis.field,
+        suggestion: errorAnalysis.suggestion,
         availableColumns: structure?.allColumns || 'unknown'
       }, { status: 400 })
     }
