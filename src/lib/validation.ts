@@ -78,13 +78,9 @@ export function buildInsertData(okrData: any, tableStructure: any): any {
     // 进度字段 - 根据实际表结构，只使用progress字段
     insertData.progress = 0
     
-    // 日期字段 - 保证非空
-    if (tableStructure.hasStartDate) {
-      insertData.start_date = validation.data.start_date
-    }
-    if (tableStructure.hasEndDate) {
-      insertData.end_date = validation.data.end_date
-    }
+    // 日期字段 - 保证非空，无论表结构检测结果如何都添加
+    insertData.start_date = validation.data.start_date
+    insertData.end_date = validation.data.end_date
     
     // 目标年份和季度
     if (tableStructure.hasTargetYear) {
