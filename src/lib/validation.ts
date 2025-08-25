@@ -24,7 +24,7 @@ export function validateOKRData(okrData: any): ValidationResult {
     errors.push('OKR标题不能为空')
   }
 
-  // 设置默认值
+  // 设置默认值 - 确保必填字段有值
   const today = new Date().toISOString().split('T')[0]
   const defaultEndDate = new Date()
   defaultEndDate.setMonth(defaultEndDate.getMonth() + 3)
@@ -75,12 +75,8 @@ export function buildInsertData(okrData: any, tableStructure: any): any {
       insertData.priority = validation.data.priority
     }
     
-    // 进度字段
-    if (tableStructure.hasProgressPercentage) {
-      insertData.progress_percentage = 0
-    } else if (tableStructure.hasProgress) {
-      insertData.progress = 0
-    }
+    // 进度字段 - 根据实际表结构，只使用progress字段
+    insertData.progress = 0
     
     // 日期字段 - 保证非空
     if (tableStructure.hasStartDate) {

@@ -9,7 +9,16 @@
       "Bash(npm run dev:*)",
       "Bash(git reset:*)",
       "Bash(curl:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(ping:*)",
+      "Bash(git config:*)",
+      "Bash(curl:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run test-db:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run init-db:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []
