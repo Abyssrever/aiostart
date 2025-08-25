@@ -88,8 +88,8 @@ async function getCommitsFromLocal() {
 
     const commits = stdout
       .split('\n')
-      .filter(line => line.trim())
-      .map((line, index) => {
+      .filter((line: string) => line.trim())
+      .map((line: string, index: number) => {
         const [hash, message, author, date, refs] = line.split('|')
         
         return {
