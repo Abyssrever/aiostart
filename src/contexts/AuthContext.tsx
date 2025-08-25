@@ -172,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: existingUsers, error: queryError } = queryResult
 
       if (queryError) {
-        console.error('查询用户时出错:', queryError)
+        console.error('查询用户时出错:', queryError.message || queryError)
         return { error: '查询用户信息失败' }
       }
 
