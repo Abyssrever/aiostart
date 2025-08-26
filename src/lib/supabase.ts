@@ -5,7 +5,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // 创建浏览器端客户端
-export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+export const supabase = typeof window !== 'undefined' 
+  ? createBrowserClient(supabaseUrl, supabaseAnonKey)
+  : createClient(supabaseUrl, supabaseAnonKey)
 
 // 创建开发环境专用客户端（绕过RLS）
 // 注意：在生产环境中不应该在客户端暴露service role key
@@ -53,6 +55,9 @@ export type Database = {
           class_name: string | null
           role: 'student' | 'teacher' | 'admin'
           status: 'active' | 'inactive' | 'suspended'
+          email_verified: boolean
+          verification_token: string | null
+          token_expires_at: string | null
           last_login_at: string | null
           created_at: string
           updated_at: string
@@ -74,6 +79,9 @@ export type Database = {
           class_name?: string | null
           role?: 'student' | 'teacher' | 'admin'
           status?: 'active' | 'inactive' | 'suspended'
+          email_verified?: boolean
+          verification_token?: string | null
+          token_expires_at?: string | null
           last_login_at?: string | null
           created_at?: string
           updated_at?: string
@@ -95,6 +103,9 @@ export type Database = {
           class_name?: string | null
           role?: 'student' | 'teacher' | 'admin'
           status?: 'active' | 'inactive' | 'suspended'
+          email_verified?: boolean
+          verification_token?: string | null
+          token_expires_at?: string | null
           last_login_at?: string | null
           created_at?: string
           updated_at?: string
@@ -274,6 +285,32 @@ export type Database = {
           role_id: string
           assigned_by: string | null
           assigned_at: string
+        }
+      }
+      email_verification_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          token: string
+          expires_at: string
+          used: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          token: string
+          expires_at: string
+          used?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          token?: string
+          expires_at?: string
+          used?: boolean
+          created_at?: string
         }
       }
     }

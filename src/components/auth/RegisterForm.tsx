@@ -1,15 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAuth } from '@/contexts/AuthContext'
-import { UserRole } from '@/lib/supabase'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 interface RegisterFormProps {
   onToggleMode?: () => void
@@ -22,13 +21,15 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
     confirmPassword: '',
     name: '',
     role: '',
-    studentId: ''
+    student_id: ''
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   
-  const { signUp } = useAuth()
+  const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -52,36 +53,56 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
     setLoading(true)
 
     // 验证必填字段
+    if (!formData.name.trim()) {
+      setError('请输入您的姓名')
+      setLoading(false)
+      return
+    }
+
     if (!formData.role) {
       setError('请选择您的角色')
       setLoading(false)
       return
     }
 
-    // 验证密码
-    if (formData.password !== formData.confirmPassword) {
-      setError('两次输入的密码不一致')
+    if (!formData.email.trim()) {
+      setError('请输入邮箱地址')
       setLoading(false)
       return
     }
 
+    // 验证密码
     if (formData.password.length < 6) {
       setError('密码长度至少为6位')
       setLoading(false)
       return
     }
 
+    if (formData.password !== formData.confirmPassword) {
+      setError('两次输入的密码不一致')
+      setLoading(false)
+      return
+    }
+
     try {
-      const result = await signUp(formData.email, formData.password, {
-        name: formData.name,
-        role: formData.role as UserRole,
-        student_id: formData.studentId || undefined
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email.trim(),
+          password: formData.password,
+          name: formData.name.trim(),
+          role: formData.role,
+          student_id: formData.student_id.trim() || undefined
+        })
       })
       
-      if (result.error) {
-        setError(result.error)
-      } else {
-        setSuccess('注册成功！请检查您的邮箱以验证账户。')
+      const result = await response.json()
+      
+      if (result.success) {
+        setSuccess('注册成功！我们已向您的邮箱发送了验证邮件，请查收并点击验证链接激活账户。')
         // 清空表单
         setFormData({
           email: '',
@@ -89,11 +110,18 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           confirmPassword: '',
           name: '',
           role: '',
-          studentId: ''
+          student_id: ''
         })
+        
+        // 3秒后跳转到登录页面
+        setTimeout(() => {
+          router.push('/login')
+        }, 3000)
+      } else {
+        setError(result.error)
       }
     } catch (err) {
-      setError('注册失败，请稍后重试')
+      setError('注册失败，请检查网络连接后重试')
     } finally {
       setLoading(false)
     }
@@ -102,9 +130,9 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">身份验证</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">🌟 加入启明星</CardTitle>
         <CardDescription className="text-center">
-          请填写您的身份信息进行验证
+          请填写您的信息完成注册
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -117,7 +145,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           
           {success && (
             <Alert>
-              <AlertDescription>{success}</AlertDescription>
+              <AlertDescription className="text-green-600">{success}</AlertDescription>
             </Alert>
           )}
           
@@ -150,13 +178,13 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="studentId">学号（可选）</Label>
+            <Label htmlFor="student_id">学号（可选）</Label>
             <Input
-              id="studentId"
-              name="studentId"
+              id="student_id"
+              name="student_id"
               type="text"
               placeholder="请输入学号"
-              value={formData.studentId}
+              value={formData.student_id}
               onChange={handleChange}
               disabled={loading}
             />
@@ -178,30 +206,64 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           
           <div className="space-y-2">
             <Label htmlFor="password">密码</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="请输入密码（至少6位）"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="请输入密码（至少6位）"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">确认密码</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="请再次输入密码"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="请再次输入密码"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={loading}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
           
           <Button 
@@ -212,26 +274,25 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                验证中...
+                注册中...
               </>
             ) : (
-              '验证身份'
+              '注册账户'
             )}
           </Button>
         </form>
         
-        {onToggleMode && (
-          <div className="mt-4 text-center text-sm">
-            已完成身份验证？{' '}
-            <button
-              type="button"
-              onClick={onToggleMode}
-              className="text-primary hover:underline font-medium"
-            >
-              立即登录
-            </button>
-          </div>
-        )}
+        <div className="mt-4 text-center text-sm">
+          已有账户？{' '}
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => router.push('/login')}
+            className="p-0 h-auto font-normal text-blue-600 hover:text-blue-800"
+          >
+            立即登录
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

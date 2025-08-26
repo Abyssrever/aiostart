@@ -290,17 +290,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // 登录
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log('AuthContext: 开始登录，邮箱:', email)
+      
+      // 直接使用Supabase客户端登录，确保session正确设置
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       })
-
-      if (error) {
-        return { error: error.message }
+      
+      if (authError) {
+        console.error('AuthContext: Supabase登录失败:', authError)
+        
+        if (authError.message.includes('Invalid login credentials')) {
+          return { error: '邮箱或密码错误，请检查后重试' }
+        } else if (authError.message.includes('Email not confirmed')) {
+          return { error: '请先验证您的邮箱后再登录' }
+        } else {
+          return { error: '登录失败：' + authError.message }
+        }
       }
-
+      
+      if (!authData.user || !authData.session) {
+        return { error: '登录失败，请稍后重试' }
+      }
+      
+      console.log('AuthContext: Supabase登录成功，用户ID:', authData.user.id)
+      
+      // 设置session
+      setSession(authData.session)
+      
+      // 获取用户资料
+      await fetchUserProfile(authData.user.id)
+      
+      setLoading(false)
       return {}
     } catch (error) {
+      console.error('AuthContext: 登录异常:', error)
       return { error: '登录失败，请稍后重试' }
     }
   }
