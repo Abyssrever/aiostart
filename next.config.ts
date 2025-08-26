@@ -5,6 +5,14 @@ const nextConfig: NextConfig = {
     // 构建时忽略 ESLint 报错（例如 no-explicit-any）
     ignoreDuringBuilds: true,
   },
+  // 添加favicon处理配置
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.(ico|png|jpg|jpeg|gif|svg)$/,
+      type: 'asset/resource',
+    });
+    return config;
+  },
 };
 
 export default nextConfig;

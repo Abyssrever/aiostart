@@ -26,26 +26,11 @@ export default function DashboardPage() {
 
     console.log('Dashboard: 用户已登录，角色:', user.roles)
 
-    // 添加延迟避免快速重定向
-    const redirectTimer = setTimeout(() => {
-      // 根据用户角色重定向到相应的dashboard
-      if (hasRole('admin')) {
-        console.log('Dashboard: 重定向到管理员页面')
-        router.replace('/dashboard/admin')
-      } else if (hasRole('teacher')) {
-        console.log('Dashboard: 重定向到教师页面')
-        router.replace('/dashboard/teacher')
-      } else if (hasRole('student')) {
-        console.log('Dashboard: 重定向到学生页面')
-        router.replace('/dashboard/student')
-      } else {
-        console.log('Dashboard: 没有匹配角色，默认重定向到学生页面')
-        router.replace('/dashboard/student')
-      }
-    }, 1000) // 增加延迟到1秒
-
-    return () => clearTimeout(redirectTimer)
-  }, [user, loading, hasRole, router])
+    // 默认重定向到学生页面，不进行角色检查
+    console.log('Dashboard: 默认重定向到学生页面')
+    router.replace('/dashboard/student')
+    
+  }, [user, loading, router])
 
   // 显示加载状态
   return (

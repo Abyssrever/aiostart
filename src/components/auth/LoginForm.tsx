@@ -53,19 +53,38 @@ function LoginFormContent() {
     setSuccess('')
 
     try {
+      console.log('LoginForm: 开始调用signIn方法')
       // 使用AuthContext的signIn方法
-      const result = await signIn(email, password)
+      const result = await signIn(email.trim().toLowerCase(), password)
+      
+      console.log('LoginForm: signIn返回结果:', result)
       
       if (result.error) {
+        console.log('LoginForm: 登录失败，错误:', result.error)
         setError(result.error)
         return
       }
       
       // 登录成功
+      console.log('LoginForm: 登录成功，准备跳转到dashboard')
       setSuccess('登录成功！正在跳转...')
-      router.push('/dashboard')
+      
+      // 使用setTimeout确保状态更新完成后再跳转
+      setTimeout(() => {
+        console.log('LoginForm: 执行页面跳转到/dashboard')
+        try {
+          // 直接跳转到学生页面，绕过dashboard的角色检查
+          router.push('/dashboard/student')
+          console.log('LoginForm: 已执行跳转命令')
+        } catch (routeError) {
+          console.error('LoginForm: 路由跳转错误:', routeError)
+          // 如果直接跳转失败，尝试使用replace
+          router.replace('/dashboard/student')
+        }
+      }, 500) // 增加延迟以确保状态更新
+      
     } catch (error) {
-      console.error('登录异常:', error)
+      console.error('LoginForm: 登录异常:', error)
       setError('登录失败，请检查网络连接')
     } finally {
       setLoading(false)

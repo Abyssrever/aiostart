@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "启明星平台 - 智能化教育管理系统",
   description: "基于AI的智能化教育管理平台，为学生、教师和管理员提供全方位的教育服务",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
