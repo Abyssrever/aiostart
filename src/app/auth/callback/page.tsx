@@ -28,7 +28,7 @@ export default function AuthCallback() {
           // 检查是否是邮箱确认回调
           if (data.session.user.email_confirmed_at) {
             console.log('邮箱已确认，跳转到登录页面显示成功消息')
-            router.push('/login?verified=true&email=' + encodeURIComponent(data.session.user.email))
+            router.push('/login?verified=true&email=' + encodeURIComponent(data.session.user.email || ''))
           } else {
             // 直接跳转到dashboard
             router.push('/dashboard')
