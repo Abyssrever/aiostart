@@ -294,7 +294,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // 直接使用Supabase客户端登录，确保session正确设置
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password
       })
       
@@ -316,13 +316,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('AuthContext: Supabase登录成功，用户ID:', authData.user.id)
       
-      // 设置session
+      // 设置session - 这会触发 onAuthStateChange
       setSession(authData.session)
       
       // 获取用户资料
-      await fetchUserProfile(authData.user.id)
+      try {
+        await fetchUserProfile(authData.user.id)
+        console.log('AuthContext: 用户资料获取完成')
+      } catch (profileError) {
+        console.error('AuthContext: 用户资料获取失败:', profileError)
+        // 即使资料获取失败，也继续登录流程
+      }
       
-      setLoading(false)
+      // 不在这里设置 loading，让 onAuthStateChange 处理
       return {}
     } catch (error) {
       console.error('AuthContext: 登录异常:', error)
