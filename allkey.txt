@@ -1,0 +1,24 @@
+git：
+
+superbase：
+Project ID：sxhfiadommaopzoigtbz
+project_URL:https://sxhfiadommaopzoigtbz.supabase.co
+anon_public:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4aGZpYWRvbW1hb3B6b2lndGJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3NDAzMDcsImV4cCI6MjA3MTMxNjMwN30.XuGU_SfH185ZVSqZwEtPaIPZv_nPnNHRtJPzkWnVgBc
+访问令牌：sbp_9d763306eb5aa2815e55cae1854f47c6d277ffed
+service_role：eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4aGZpYWRvbW1hb3B6b2lndGJ6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTc0MDMwNywiZXhwIjoyMDcxMzE2MzA3fQ.053-ksLf3gkj03KXZZOcdZoAJ7oYvKeckoCuKswZ1U4
+
+
+vercel：
+Project ID：prj_v7oFtpAIU1j0O02nzSQHsozqiEwh
+访问令牌：BSPTCXSxfy3WUA12Acebjb8l
+
+resend：
+APIKEY:re_NrCrqpmQ_JGK3MLUru425CgWs7cJXmEzc
+
+github_URL：
+https://github.com/Abyssrever/aiostart.git
+
+n8n：
+webhook:
+testURL:https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook-test/21e98a9d-e00b-42e7-a224-37c14f335815
+ProductionURL:https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook/21e98a9d-e00b-42e7-a224-37c14f335815
