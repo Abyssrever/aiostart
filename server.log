@@ -711,3 +711,19 @@ AI服务请求失败: TypeError: fetch failed
  GET /dashboard/student 200 in 52ms
  ✓ Compiled in 342ms (466 modules)
  GET /dashboard/student 200 in 46ms
+ ✓ Compiled in 358ms (466 modules)
+ GET /dashboard/student 200 in 77ms
+ ✓ Compiled in 282ms (466 modules)
+ GET /dashboard/student 200 in 282ms
+ ✓ Compiled in 347ms (466 modules)
+ GET /dashboard/student 200 in 57ms
+ ✓ Compiled in 288ms (466 modules)
+ GET /dashboard/student 200 in 87ms
+ ✓ Compiled in 321ms (466 modules)
+ GET /dashboard/student 200 in 336ms
+ ✓ Compiled in 438ms (466 modules)
+ GET /dashboard/student 200 in 50ms
+ ✓ Compiled in 348ms (466 modules)
+ GET /dashboard/student 200 in 347ms
+ ✓ Compiled in 419ms (466 modules)
+ GET /dashboard/student 200 in 48ms
