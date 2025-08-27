@@ -733,3 +733,191 @@ AI服务请求失败: TypeError: fetch failed
  GET /dashboard/student 200 in 90ms
  ✓ Compiled in 323ms (466 modules)
  ✓ Compiled in 296ms (466 modules)
+ GET / 200 in 88ms
+ GET /login 200 in 44ms
+ GET /dashboard/student 200 in 30ms
+🚀 AI Chat API 被调用
+📤 收到请求: { message: '你好', sessionType: 'general' }
+🚀 调用N8N工作流: https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook/21e98a9d-e00b-42e7-a224-37c14f335815
+📤 请求数据: {
+  userMessage: '你好',
+  userId: undefined,
+  sessionId: undefined,
+  sessionType: 'general',
+  userProfile: undefined,
+  conversationHistory: [],
+  metadata: { platform: 'qiming-star', timestamp: '2025-08-27T13:50:14.777Z' }
+}
+N8N webhook调用异常: TypeError: fetch failed
+    at async AIServiceManager.callN8nWebhook (src\lib\ai-service-manager.ts:96:24)
+    at async AIServiceManager.sendAIRequest (src\lib\ai-service-manager.ts:48:22)
+    at async POST (src\app\api\ai-chat\route.ts:26:24)
+  94 |       console.log('📤 请求数据:', n8nRequest)
+  95 |
+> 96 |       const response = await fetch(this.config.webhookUrl, {
+     |                        ^
+  97 |         method: 'POST',
+  98 |         headers: {
+  99 |           'Content-Type': 'application/json; charset=utf-8', {
+  [cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 47.90.209.144:443, 47.253.35.19:443, 47.89.186.110:443, 47.89.135.118:443, 47.90.173.78:443, timeout: 10000ms)] {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+AI服务请求失败: TypeError: fetch failed
+    at async AIServiceManager.callN8nWebhook (src\lib\ai-service-manager.ts:96:24)
+    at async AIServiceManager.sendAIRequest (src\lib\ai-service-manager.ts:48:22)
+    at async POST (src\app\api\ai-chat\route.ts:26:24)
+  94 |       console.log('📤 请求数据:', n8nRequest)
+  95 |
+> 96 |       const response = await fetch(this.config.webhookUrl, {
+     |                        ^
+  97 |         method: 'POST',
+  98 |         headers: {
+  99 |           'Content-Type': 'application/json; charset=utf-8', {
+  [cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 47.90.209.144:443, 47.253.35.19:443, 47.89.186.110:443, 47.89.135.118:443, 47.90.173.78:443, timeout: 10000ms)] {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+❌ AI Chat API 错误: TypeError: fetch failed
+    at async AIServiceManager.callN8nWebhook (src\lib\ai-service-manager.ts:96:24)
+    at async AIServiceManager.sendAIRequest (src\lib\ai-service-manager.ts:48:22)
+    at async POST (src\app\api\ai-chat\route.ts:26:24)
+  94 |       console.log('📤 请求数据:', n8nRequest)
+  95 |
+> 96 |       const response = await fetch(this.config.webhookUrl, {
+     |                        ^
+  97 |         method: 'POST',
+  98 |         headers: {
+  99 |           'Content-Type': 'application/json; charset=utf-8', {
+  [cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 47.90.209.144:443, 47.253.35.19:443, 47.89.186.110:443, 47.89.135.118:443, 47.90.173.78:443, timeout: 10000ms)] {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+ POST /api/ai-chat 500 in 10975ms
+ GET /dashboard/student 200 in 56ms
+ GET /login 200 in 43ms
+ GET /login 200 in 27ms
+ GET /login 200 in 103ms
+ GET /login 200 in 61ms
+ GET /dashboard/student 200 in 28ms
+🚀 AI Chat API 被调用
+📤 收到请求: { message: '你好', sessionType: 'general' }
+🚀 调用N8N工作流: https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook/21e98a9d-e00b-42e7-a224-37c14f335815
+📤 请求数据: {
+  userMessage: '你好',
+  userId: undefined,
+  sessionId: undefined,
+  sessionType: 'general',
+  userProfile: undefined,
+  conversationHistory: [],
+  metadata: { platform: 'qiming-star', timestamp: '2025-08-27T13:52:37.266Z' }
+}
+N8N webhook调用异常: TypeError: fetch failed
+    at async AIServiceManager.callN8nWebhook (src\lib\ai-service-manager.ts:96:24)
+    at async AIServiceManager.sendAIRequest (src\lib\ai-service-manager.ts:48:22)
+    at async POST (src\app\api\ai-chat\route.ts:26:24)
+  94 |       console.log('📤 请求数据:', n8nRequest)
+  95 |
+> 96 |       const response = await fetch(this.config.webhookUrl, {
+     |                        ^
+  97 |         method: 'POST',
+  98 |         headers: {
+  99 |           'Content-Type': 'application/json; charset=utf-8', {
+  [cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 47.90.209.144:443, 47.89.186.110:443, 47.253.35.19:443, 47.89.135.118:443, 47.90.173.78:443, timeout: 10000ms)] {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+AI服务请求失败: TypeError: fetch failed
+    at async AIServiceManager.callN8nWebhook (src\lib\ai-service-manager.ts:96:24)
+    at async AIServiceManager.sendAIRequest (src\lib\ai-service-manager.ts:48:22)
+    at async POST (src\app\api\ai-chat\route.ts:26:24)
+  94 |       console.log('📤 请求数据:', n8nRequest)
+  95 |
+> 96 |       const response = await fetch(this.config.webhookUrl, {
+     |                        ^
+  97 |         method: 'POST',
+  98 |         headers: {
+  99 |           'Content-Type': 'application/json; charset=utf-8', {
+  [cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 47.90.209.144:443, 47.89.186.110:443, 47.253.35.19:443, 47.89.135.118:443, 47.90.173.78:443, timeout: 10000ms)] {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+❌ AI Chat API 错误: TypeError: fetch failed
+    at async AIServiceManager.callN8nWebhook (src\lib\ai-service-manager.ts:96:24)
+    at async AIServiceManager.sendAIRequest (src\lib\ai-service-manager.ts:48:22)
+    at async POST (src\app\api\ai-chat\route.ts:26:24)
+  94 |       console.log('📤 请求数据:', n8nRequest)
+  95 |
+> 96 |       const response = await fetch(this.config.webhookUrl, {
+     |                        ^
+  97 |         method: 'POST',
+  98 |         headers: {
+  99 |           'Content-Type': 'application/json; charset=utf-8', {
+  [cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 47.90.209.144:443, 47.89.186.110:443, 47.253.35.19:443, 47.89.135.118:443, 47.90.173.78:443, timeout: 10000ms)] {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+ POST /api/ai-chat 500 in 10875ms
+ ✓ Compiled in 970ms (1037 modules)
+ GET /dashboard/student 200 in 256ms
+ ✓ Compiled in 768ms (1016 modules)
+ GET /dashboard/student 200 in 331ms
+ ✓ Compiled in 1213ms (1016 modules)
+ GET /dashboard/student 200 in 122ms
+ GET /dashboard/student 200 in 410ms
+ GET /login 200 in 73ms
+ GET /login 200 in 38ms
+ ✓ Compiled / in 128ms (555 modules)
+ GET / 200 in 378ms
+ GET /login 200 in 80ms
+ GET /dashboard/student 200 in 45ms
+ ✓ Compiled /api/ai-chat in 240ms (576 modules)
+🌍 环境变量调试: { AI_PROVIDER: 'n8n', AI_WEBHOOK_URL: '已配置', AI_TIMEOUT: '30000' }
+🚀 AI Chat API 被调用
+📤 收到请求: { message: '123456', sessionType: 'general' }
+🔧 AI服务管理器初始化配置: {
+  provider: 'n8n',
+  webhookUrl: '已配置',
+  hasApiKey: false,
+  timeout: 30000
+}
+🔄 尝试第 1 次连接AI服务
+🚀 调用N8N工作流: https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook/21e98a9d-e00b-42e7-a224-37c14f335815
+📤 请求数据: {
+  userMessage: '123456',
+  userId: undefined,
+  sessionId: undefined,
+  sessionType: 'general',
+  userProfile: undefined,
+  conversationHistory: [],
+  metadata: { platform: 'qiming-star', timestamp: '2025-08-27T13:55:19.949Z' }
+}
+ GET /dashboard/student 200 in 257ms
+📊 N8N响应状态: 200
+📥 N8N原始响应: {"responds":"你好！我是启明星，你的专属AI学习助手。\n\n我在这里帮你制定并达成学习目标（OKR），以及解答你学习中遇到的知识问题。\n\n请尽管提出你的问题或目标，我将竭诚为你服务。"}
+📥 N8N解析后数据: {
+  responds: '你好！我是启明星，你的专属AI学习助手。\n' +
+    '\n' +
+    '我在这里帮你制定并达成学习目标（OKR），以及解答你学习中遇到的知识问题。\n' +
+    '\n' +
+    '请尽管提出你的问题或目标，我将竭诚为你服务。'
+}
+🔍 解析N8N响应: {
+  responds: '你好！我是启明星，你的专属AI学习助手。\n' +
+    '\n' +
+    '我在这里帮你制定并达成学习目标（OKR），以及解答你学习中遇到的知识问题。\n' +
+    '\n' +
+    '请尽管提出你的问题或目标，我将竭诚为你服务。'
+}
+✅ 解析出的AI回复: 你好！我是启明星，你的专属AI学习助手。
+
+我在这里帮你制定并达成学习目标（OKR），以及解答你学习中遇到的知识问题。
+
+请尽管提出你的问题或目标，我将竭诚为你服务。
+✅ AI服务连接成功，用时 7301ms
+✅ AI响应成功: 你好！我是启明星，你的专属AI学习助手。
+
+我在这里帮你制定并达成学习目标（OKR），以及解答你学习中遇到的知识问题。
+
+请尽管提出你的问题或目标，我将竭诚为你服务。
+ POST /api/ai-chat 200 in 7726ms

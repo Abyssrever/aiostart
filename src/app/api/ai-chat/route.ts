@@ -28,10 +28,11 @@ export async function POST(request: NextRequest) {
     console.log('✅ AI响应成功:', aiResponse.content)
     
     return NextResponse.json({
-      success: true,
+      success: aiResponse.success !== false,
       content: aiResponse.content,
       tokensUsed: aiResponse.tokensUsed,
-      responseTime: aiResponse.responseTime
+      responseTime: aiResponse.responseTime,
+      error: aiResponse.error
     })
     
   } catch (error) {
@@ -39,7 +40,8 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: false,
-      error: '抱歉，AI服务暂时不可用，请稍后重试。'
+      content: '抱歉，AI服务暂时不可用，请稍后重试。',
+      error: error instanceof Error ? error.message : '未知错误'
     }, { status: 500 })
   }
 }

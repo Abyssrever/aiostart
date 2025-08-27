@@ -268,6 +268,11 @@ export class ChatService {
       if (data.success) {
         return data.content
       } else {
+        // 如果服务返回了内容（即使success为false），直接返回内容而不是抛出错误
+        if (data.content) {
+          console.warn('⚠️ AI服务部分失败，但返回了响应:', data.content)
+          return data.content
+        }
         throw new Error(data.error || 'AI服务调用失败')
       }
       

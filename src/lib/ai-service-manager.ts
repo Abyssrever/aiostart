@@ -32,42 +32,64 @@ export class AIServiceManager {
    * 发送AI请求（主要入口）
    */
   async sendAIRequest(request: AIRequest): Promise<AIResponse> {
-    try {
-      // 检查服务状态
-      if (this.serviceStatus !== AIServiceStatus.AVAILABLE) {
-        throw new Error(`AI服务当前不可用: ${this.serviceStatus}`)
-      }
-
-      const startTime = Date.now()
-
-      // 根据配置选择不同的AI服务
-      let response: AIResponse
-
-      switch (this.config.provider) {
-        case 'n8n':
-          response = await this.callN8nWebhook(request)
-          break
-        case 'zapier':
-          response = await this.callZapierWebhook(request)
-          break
-        case 'openai':
-          response = await this.callOpenAI(request)
-          break
-        case 'claude':
-          response = await this.callClaude(request)
-          break
-        default:
-          response = await this.callCustomAPI(request)
-      }
-
-      // 添加响应时间
-      response.responseTime = Date.now() - startTime
-
-      return response
-    } catch (error) {
-      console.error('AI服务请求失败:', error)
-      throw error
+    // 检查服务状态
+    if (this.serviceStatus !== AIServiceStatus.AVAILABLE) {
+      throw new Error(`AI服务当前不可用: ${this.serviceStatus}`)
     }
+
+    const startTime = Date.now()
+    const maxRetries = 2
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 尝试第 ${attempt} 次连接AI服务`)
+        
+        // 根据配置选择不同的AI服务
+        let response: AIResponse
+
+        switch (this.config.provider) {
+          case 'n8n':
+            response = await this.callN8nWebhook(request)
+            break
+          case 'zapier':
+            response = await this.callZapierWebhook(request)
+            break
+          case 'openai':
+            response = await this.callOpenAI(request)
+            break
+          case 'claude':
+            response = await this.callClaude(request)
+            break
+          default:
+            response = await this.callCustomAPI(request)
+        }
+
+        // 添加响应时间
+        response.responseTime = Date.now() - startTime
+        console.log(`✅ AI服务连接成功，用时 ${response.responseTime}ms`)
+        return response
+        
+      } catch (error) {
+        console.error(`❌ 第 ${attempt} 次尝试失败:`, error)
+        
+        if (attempt === maxRetries) {
+          console.error('🚨 所有重试均失败，返回备用响应')
+          // 返回备用响应而不是抛出错误
+          return {
+            content: '抱歉，AI服务暂时不可用，请稍后再试。如问题持续，请联系技术支持。',
+            success: false,
+            responseTime: Date.now() - startTime,
+            error: error instanceof Error ? error.message : '未知错误'
+          }
+        }
+        
+        // 等待后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+      }
+    }
+    
+    // 这里理论上不会执行到
+    throw new Error('意外的执行路径')
   }
 
   /**
