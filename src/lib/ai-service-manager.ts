@@ -12,6 +12,13 @@ export class AIServiceManager {
 
   private constructor() {
     this.config = AI_CONFIG
+    // 调试输出配置信息
+    console.log('🔧 AI服务管理器初始化配置:', {
+      provider: this.config.provider,
+      webhookUrl: this.config.webhookUrl ? '已配置' : '未配置',
+      hasApiKey: !!this.config.apiKey,
+      timeout: this.config.timeout
+    })
   }
 
   public static getInstance(): AIServiceManager {
@@ -25,46 +32,68 @@ export class AIServiceManager {
    * 发送AI请求（主要入口）
    */
   async sendAIRequest(request: AIRequest): Promise<AIResponse> {
-    try {
-      // 检查服务状态
-      if (this.serviceStatus !== AIServiceStatus.AVAILABLE) {
-        throw new Error(`AI服务当前不可用: ${this.serviceStatus}`)
-      }
-
-      const startTime = Date.now()
-
-      // 根据配置选择不同的AI服务
-      let response: AIResponse
-
-      switch (this.config.provider) {
-        case 'n8n':
-          response = await this.callN8nWebhook(request)
-          break
-        case 'zapier':
-          response = await this.callZapierWebhook(request)
-          break
-        case 'openai':
-          response = await this.callOpenAI(request)
-          break
-        case 'claude':
-          response = await this.callClaude(request)
-          break
-        default:
-          response = await this.callCustomAPI(request)
-      }
-
-      // 添加响应时间
-      response.responseTime = Date.now() - startTime
-
-      return response
-    } catch (error) {
-      console.error('AI服务请求失败:', error)
-      throw error
+    // 检查服务状态
+    if (this.serviceStatus !== AIServiceStatus.AVAILABLE) {
+      throw new Error(`AI服务当前不可用: ${this.serviceStatus}`)
     }
+
+    const startTime = Date.now()
+    const maxRetries = 2
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 尝试第 ${attempt} 次连接AI服务`)
+        
+        // 根据配置选择不同的AI服务
+        let response: AIResponse
+
+        switch (this.config.provider) {
+          case 'n8n':
+            response = await this.callN8nWebhook(request)
+            break
+          case 'zapier':
+            response = await this.callZapierWebhook(request)
+            break
+          case 'openai':
+            response = await this.callOpenAI(request)
+            break
+          case 'claude':
+            response = await this.callClaude(request)
+            break
+          default:
+            response = await this.callCustomAPI(request)
+        }
+
+        // 添加响应时间
+        response.responseTime = Date.now() - startTime
+        console.log(`✅ AI服务连接成功，用时 ${response.responseTime}ms`)
+        return response
+        
+      } catch (error) {
+        console.error(`❌ 第 ${attempt} 次尝试失败:`, error)
+        
+        if (attempt === maxRetries) {
+          console.error('🚨 所有重试均失败，返回备用响应')
+          // 返回备用响应而不是抛出错误
+          return {
+            content: '抱歉，AI服务暂时不可用，请稍后再试。如问题持续，请联系技术支持。',
+            success: false,
+            responseTime: Date.now() - startTime,
+            error: error instanceof Error ? error.message : '未知错误'
+          }
+        }
+        
+        // 等待后重试
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
+      }
+    }
+    
+    // 这里理论上不会执行到
+    throw new Error('意外的执行路径')
   }
 
   /**
-   * N8N工作流调用
+   * N8N工作流调用 - 适配启明星平台格式
    */
   private async callN8nWebhook(request: AIRequest): Promise<AIResponse> {
     if (!this.config.webhookUrl) {
@@ -72,24 +101,52 @@ export class AIServiceManager {
     }
 
     try {
+      // 构建N8N期望的请求格式
+      const n8nRequest = {
+        userMessage: request.message,
+        userId: request.userId,
+        sessionId: request.sessionId,
+        sessionType: request.sessionType || 'general',
+        userProfile: request.userProfile,
+        conversationHistory: request.conversationHistory || [],
+        metadata: request.metadata
+      }
+
+      console.log('🚀 调用N8N工作流:', this.config.webhookUrl)
+      console.log('📤 请求数据:', n8nRequest)
+
       const response = await fetch(this.config.webhookUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` })
+          'Content-Type': 'application/json; charset=utf-8',
+          'User-Agent': 'QimingStar-Platform/1.0',
+          'Accept': 'application/json',
+          'Accept-Charset': 'utf-8'
         },
-        body: JSON.stringify({
-          ...request,
-          config: this.getSessionConfig(request.sessionType)
-        }),
+        body: JSON.stringify(n8nRequest),
         signal: AbortSignal.timeout(this.config.timeout || 30000)
       })
 
+      console.log(`📊 N8N响应状态: ${response.status}`)
+
       if (!response.ok) {
-        throw new Error(`N8N webhook调用失败: ${response.status}`)
+        const errorText = await response.text()
+        console.error(`N8N webhook失败: ${response.status}`, errorText)
+        throw new Error(`N8N webhook调用失败: ${response.status} - ${errorText}`)
       }
 
-      const data = await response.json()
+      const responseText = await response.text()
+      console.log('📥 N8N原始响应:', responseText)
+      
+      let data
+      try {
+        data = JSON.parse(responseText)
+        console.log('📥 N8N解析后数据:', data)
+      } catch (error) {
+        console.log('⚠️ N8N响应不是JSON格式，直接使用文本内容')
+        data = { response: responseText }
+      }
+      
       return this.parseN8nResponse(data)
     } catch (error) {
       console.error('N8N webhook调用异常:', error)
@@ -206,17 +263,43 @@ export class AIServiceManager {
   }
 
   /**
-   * 解析N8N响应
+   * 解析N8N响应 - 适配启明星平台
    */
   private parseN8nResponse(data: any): AIResponse {
-    // 根据N8N工作流的返回格式解析响应
-    // 这个格式需要根据实际的N8N工作流来调整
+    console.log('🔍 解析N8N响应:', data)
+    
+    // 根据您的N8N工作流返回格式：{"response": "内容"}
+    let content = '抱歉，AI服务暂时不可用，请稍后再试。'
+    
+    if (data && typeof data === 'object') {
+      // 优先使用response字段（您的N8N工作流返回格式）
+      if (data.response) {
+        content = data.response
+      } else if (data.responds) {
+        // 处理N8N工作流返回的responds字段
+        content = data.responds
+      } else if (data.content) {
+        content = data.content
+      } else if (data.message) {
+        content = data.message
+      } else if (typeof data === 'string') {
+        content = data
+      }
+    }
+    
+    console.log('✅ 解析出的AI回复:', content)
+    
     return {
-      content: data.response || data.message || data.content || '抱歉，无法生成回复',
-      tokensUsed: data.tokensUsed || 0,
-      confidence: data.confidence || 0.8,
+      content: content,
+      tokensUsed: data.tokensUsed || Math.floor(content.length / 4), // 粗略估算
+      responseTime: data.responseTime || 0,
+      confidence: data.confidence || 0.9,
       suggestions: data.suggestions || [],
-      metadata: data.metadata || {}
+      metadata: {
+        source: 'n8n-workflow',
+        timestamp: new Date().toISOString(),
+        ...data.metadata
+      }
     }
   }
 
