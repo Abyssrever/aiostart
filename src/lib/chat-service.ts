@@ -205,6 +205,9 @@ export class ChatService {
     }
   ): Promise<string> {
     try {
+      console.log('🤖 调用AI服务生成回复')
+      console.log('📤 用户消息:', userMessage)
+      
       // 动态导入AI服务管理器，避免服务端渲染问题
       const { AIServiceManager } = await import('./ai-service-manager')
       const aiManager = AIServiceManager.getInstance()
@@ -222,16 +225,60 @@ export class ChatService {
         }
       }
       
+      console.log('📋 AI请求参数:', aiRequest)
+      
       // 调用AI服务
       const aiResponse = await aiManager.sendAIRequest(aiRequest)
+      console.log('✅ AI回复成功:', aiResponse.content)
+      
       return aiResponse.content
       
     } catch (error) {
-      console.error('AI服务调用失败:', error)
+      console.error('❌ AI服务调用失败:', error)
       
       // 降级到临时回复逻辑
-      console.log('使用临时回复逻辑作为降级方案')
+      console.log('⚠️ 使用降级回复逻辑')
       return await this.generateTemporaryResponse(userMessage, userId)
+    }
+  }
+
+  // 直接AI对话方法 - 通过API路由调用
+  static async directAIChat(
+    userMessage: string,
+    sessionType: 'general' | 'okr_planning' | 'study_help' | 'career_guidance' = 'general',
+    conversationHistory: any[] = []
+  ): Promise<string> {
+    console.log('🚀 直接AI对话模式 - 通过API路由')
+    
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          sessionType,
+          conversationHistory
+        })
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        return data.content
+      } else {
+        // 如果服务返回了内容（即使success为false），直接返回内容而不是抛出错误
+        if (data.content) {
+          console.warn('⚠️ AI服务部分失败，但返回了响应:', data.content)
+          return data.content
+        }
+        throw new Error(data.error || 'AI服务调用失败')
+      }
+      
+    } catch (error) {
+      console.error('❌ API调用失败:', error)
+      return await this.generateTemporaryResponse(userMessage, 'temp-user')
     }
   }
 
@@ -248,26 +295,12 @@ export class ChatService {
     throw new Error('外部AI服务未配置')
   }
 
-  // 临时回复逻辑（待AI服务接入后删除）
+  // 降级回复逻辑（当N8N服务不可用时使用）
   static async generateTemporaryResponse(userMessage: string, userId?: string): Promise<string> {
-    // 模拟AI响应延迟
-    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400))
-
-    const message = userMessage.toLowerCase()
+    console.log('⚠️ 使用降级回复逻辑 - N8N服务可能不可用')
     
-    if (message.includes('okr') || message.includes('目标')) {
-      return `关于OKR目标管理的建议：\n\n1. 目标要具体可衡量\n2. 设置有挑战性但可实现的目标\n3. 定期回顾和调整\n4. 专注过程而非结果\n\n需要帮助制定具体目标吗？`
-    }
-    
-    if (message.includes('学习') || message.includes('编程')) {
-      return `编程学习建议：\n\n📚 理论学习：选择语言深入\n🛠️ 实践练习：每天写代码\n🎯 项目实战：完成真实项目\n\n需要推荐学习资源吗？`
-    }
-    
-    if (message.includes('时间') || message.includes('管理')) {
-      return `时间管理策略：\n\n⏰ 时间块管理\n📋 优先级排序\n🔄 定期回顾优化\n\n具体哪方面需要帮助？`
-    }
-    
-    return `我理解你的问题。作为AI助手，建议：\n\n1. 明确具体目标\n2. 制定行动计划\n3. 保持持续学习\n4. 定期反思调整\n\n有什么需要详细了解的吗？`
+    // 简短的降级回复，提示用户稍后重试
+    return `抱歉，AI服务暂时不可用，请稍后重试。\n\n如果问题持续，请联系技术支持。\n\n您的问题："${userMessage.substring(0, 50)}${userMessage.length > 50 ? '...' : ''}"`
   }
 
   // 获取或创建会话
@@ -301,8 +334,8 @@ export class ChatService {
       const { data, error } = await this.createChatSession({
         user_id: userId,
         title: sessionTitle,
-        session_type: sessionType,
-        ai_agent_type: 'student' // 默认使用学生AI
+        session_type: sessionType
+        // 暂时移除 ai_agent_type 字段，直到数据库添加该列
       })
 
       return { data, error }
