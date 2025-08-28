@@ -42,6 +42,8 @@ export interface AIRequest {
 // AI响应数据结构
 export interface AIResponse {
   content: string
+  success?: boolean
+  error?: string
   tokensUsed?: number
   responseTime?: number
   confidence?: number
