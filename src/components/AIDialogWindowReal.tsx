@@ -114,10 +114,14 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
         }
       } else {
         // 添加用户消息到UI（临时显示）
-        const tempUserMessage = {
+        const tempUserMessage: ChatMessage = {
           id: Date.now().toString(),
+          session_id: 'temp',
           message_type: 'user' as const,
           content: userMessageContent,
+          metadata: {},
+          tokens_used: null,
+          response_time_ms: null,
           created_at: new Date().toISOString()
         }
         setMessages(prev => [...prev, tempUserMessage])
@@ -138,10 +142,14 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
         console.log('✅ 收到AI回复:', aiReply)
 
         // 添加AI回复到UI
-        const aiMessage = {
+        const aiMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
+          session_id: 'temp',
           message_type: 'assistant' as const,
           content: aiReply,
+          metadata: {},
+          tokens_used: null,
+          response_time_ms: null,
           created_at: new Date().toISOString()
         }
         
@@ -151,10 +159,14 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
       console.error('❌ AI对话失败:', error)
       
       // 添加错误消息
-      const errorMessage = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
+        session_id: 'temp',
         message_type: 'assistant' as const,
         content: '抱歉，AI服务暂时不可用，请稍后重试。',
+        metadata: {},
+        tokens_used: null,
+        response_time_ms: null,
         created_at: new Date().toISOString()
       }
       setMessages(prev => [...prev, errorMessage])
