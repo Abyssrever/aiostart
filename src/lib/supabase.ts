@@ -226,10 +226,7 @@ export type Database = {
           user_id: string
           title: string | null
           session_type: 'general' | 'okr_planning' | 'study_help' | 'career_guidance'
-<<<<<<< HEAD
-=======
           ai_agent_type: 'student' | 'teacher' | 'college'
->>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
           status: 'active' | 'archived' | 'deleted'
           last_message_at: string | null
           message_count: number
@@ -241,10 +238,7 @@ export type Database = {
           user_id: string
           title?: string | null
           session_type?: 'general' | 'okr_planning' | 'study_help' | 'career_guidance'
-<<<<<<< HEAD
-=======
           ai_agent_type?: 'student' | 'teacher' | 'college'
->>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
           status?: 'active' | 'archived' | 'deleted'
           last_message_at?: string | null
           message_count?: number

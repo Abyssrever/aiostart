@@ -737,14 +737,11 @@ function StudentDashboardContent() {
                                         </div>
                                         <div>
                                           <span className="font-medium">AI类型:</span> {
-<<<<<<< HEAD
                                             session.session_type === 'okr_planning' ? 'OKR助手' : 
                                             session.session_type === 'study_help' ? '学习助手' :
                                             session.session_type === 'career_guidance' ? '职业助手' :
-=======
                                             session.ai_agent_type === 'student' ? '学生助手' : 
                                             session.ai_agent_type === 'teacher' ? '教师助手' : 
->>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
                                             '通用助手'
                                           }
                                         </div>

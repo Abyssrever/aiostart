@@ -18,10 +18,7 @@ APIKEY:re_NrCrqpmQ_JGK3MLUru425CgWs7cJXmEzc
 github_URL：
 https://github.com/Abyssrever/aiostart.git
 
-<<<<<<< HEAD
 n8n：
 webhook:
 testURL:https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook-test/21e98a9d-e00b-42e7-a224-37c14f335815
 ProductionURL:https://n8n-vdarinvh.us-east-1.clawcloudrun.com/webhook/21e98a9d-e00b-42e7-a224-37c14f335815
-=======
->>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652

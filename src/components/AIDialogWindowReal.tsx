@@ -78,21 +78,6 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
     }
   }
 
-<<<<<<< HEAD
-  // 当会话打开时加载数据 - 暂时跳过数据库
-  useEffect(() => {
-    if (isOpen) {
-      console.log('🎯 AI对话窗口已打开，跳过数据库会话加载')
-      // 重置消息状态，开始新对话
-      setMessages([])
-      setCurrentSession(null)
-      setSessionLoading(false)
-    }
-  }, [isOpen, sessionType])
-
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return
-=======
   // 当会话打开时加载数据
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -101,49 +86,67 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
   }, [isOpen, user?.id, sessionType])
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading || !currentSession || !user?.id) return
->>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
+    if (!inputValue.trim() || isLoading) return
 
     setIsLoading(true)
     const userMessageContent = inputValue.trim()
     setInputValue('')
 
-<<<<<<< HEAD
-    // 添加用户消息到UI（临时显示）
-    const tempUserMessage = {
-      id: Date.now().toString(),
-      message_type: 'user' as const,
-      content: userMessageContent,
-      created_at: new Date().toISOString()
-    }
-    setMessages(prev => [...prev, tempUserMessage])
-
     try {
-      console.log('🚀 发送消息给AI:', userMessageContent)
-      
-      // 直接调用AI，跳过数据库
-      const aiReply = await ChatService.directAIChat(
-        userMessageContent,
-        sessionType,
-        messages.map(msg => ({
-          role: msg.message_type === 'user' ? 'user' : 'assistant',
-          content: msg.content,
-          timestamp: msg.created_at
-        }))
-      )
+      // 如果有session，使用数据库方式；否则使用直接AI对话
+      if (currentSession && user?.id) {
+        const { data, error } = await ChatService.sendMessage(
+          currentSession.id,
+          userMessageContent,
+          user.id
+        )
 
-      console.log('✅ 收到AI回复:', aiReply)
+        if (error) {
+          console.error('发送消息失败:', error)
+          // 恢复输入内容
+          setInputValue(userMessageContent)
+          return
+        }
 
-      // 添加AI回复到UI
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        message_type: 'assistant' as const,
-        content: aiReply,
-        created_at: new Date().toISOString()
+        if (data) {
+          // 添加新消息到界面
+          setMessages(prev => [...prev, data.userMessage, data.aiMessage])
+        }
+      } else {
+        // 添加用户消息到UI（临时显示）
+        const tempUserMessage = {
+          id: Date.now().toString(),
+          message_type: 'user' as const,
+          content: userMessageContent,
+          created_at: new Date().toISOString()
+        }
+        setMessages(prev => [...prev, tempUserMessage])
+
+        console.log('🚀 发送消息给AI:', userMessageContent)
+        
+        // 直接调用AI，跳过数据库
+        const aiReply = await ChatService.directAIChat(
+          userMessageContent,
+          sessionType,
+          messages.map(msg => ({
+            role: msg.message_type === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+            timestamp: msg.created_at
+          }))
+        )
+
+        console.log('✅ 收到AI回复:', aiReply)
+
+        // 添加AI回复到UI
+        const aiMessage = {
+          id: (Date.now() + 1).toString(),
+          message_type: 'assistant' as const,
+          content: aiReply,
+          created_at: new Date().toISOString()
+        }
+        
+        setMessages(prev => [...prev, aiMessage])
       }
-      
-      setMessages(prev => [...prev, aiMessage])
-
     } catch (error) {
       console.error('❌ AI对话失败:', error)
       
@@ -156,29 +159,11 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
       }
       setMessages(prev => [...prev, errorMessage])
       
-=======
-    try {
-      const { data, error } = await ChatService.sendMessage(
-        currentSession.id,
-        userMessageContent,
-        user.id
-      )
-
-      if (error) {
-        console.error('发送消息失败:', error)
-        // 恢复输入内容
+      // 如果是直接模式，恢复输入内容
+      if (!currentSession || !user?.id) {
         setInputValue(userMessageContent)
-        return
       }
-
-      if (data) {
-        // 添加新消息到界面
-        setMessages(prev => [...prev, data.userMessage, data.aiMessage])
-      }
-    } catch (error) {
-      console.error('发送消息异常:', error)
-      setInputValue(userMessageContent) // 恢复输入内容
->>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
+      
     } finally {
       setIsLoading(false)
     }
