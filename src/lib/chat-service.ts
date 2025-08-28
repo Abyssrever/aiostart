@@ -385,4 +385,8 @@ export class ChatService {
       return { error }
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652

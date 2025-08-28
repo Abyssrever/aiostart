@@ -57,6 +57,7 @@ export const DEFAULT_AI_CONFIG: AIServiceConfig = {
   temperature: 0.7
 }
 
+<<<<<<< HEAD
 // 调试环境变量
 console.log('🌍 环境变量调试:', {
   AI_PROVIDER: process.env.AI_PROVIDER,
@@ -64,6 +65,8 @@ console.log('🌍 环境变量调试:', {
   AI_TIMEOUT: process.env.AI_TIMEOUT
 })
 
+=======
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
 // 环境变量AI配置
 export const AI_CONFIG: AIServiceConfig = {
   provider: (process.env.AI_PROVIDER as any) || 'n8n',

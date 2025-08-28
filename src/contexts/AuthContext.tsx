@@ -79,12 +79,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+<<<<<<< HEAD
   // 获取用户资料 - 优化版本，只选择必要字段
+=======
+  // 获取用户资料
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data: profile, error: profileError } = await supabase
         .from('users')
+<<<<<<< HEAD
         .select('id, email, name, role, avatar_url, student_id, grade, major, class_name')
+=======
+        .select('*')
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
         .eq('id', userId)
         .single()
 
@@ -96,6 +104,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 直接从用户资料中获取角色
       const role = profile.role as UserRole || 'student'
       const roles = [role]
+<<<<<<< HEAD
+=======
+      const userProfile = { ...profile, roles }
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
       
       console.log('用户资料获取成功，角色:', roles)
       
@@ -113,7 +125,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(userData)
+<<<<<<< HEAD
       return { ...profile, roles }
+=======
+      return userProfile
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
     } catch (error) {
       console.error('获取用户资料异常:', error)
       return null
@@ -318,6 +334,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 设置session - 这会触发 onAuthStateChange
       setSession(authData.session)
       
+<<<<<<< HEAD
       // 并行获取用户资料，不等待完成
       fetchUserProfile(authData.user.id).then(() => {
         console.log('AuthContext: 用户资料获取完成')
@@ -327,6 +344,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       
       // 立即返回成功，不等待用户资料
+=======
+      // 获取用户资料
+      try {
+        await fetchUserProfile(authData.user.id)
+        console.log('AuthContext: 用户资料获取完成')
+      } catch (profileError) {
+        console.error('AuthContext: 用户资料获取失败:', profileError)
+        // 即使资料获取失败，也继续登录流程
+      }
+      
+      // 不在这里设置 loading，让 onAuthStateChange 处理
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
       return {}
     } catch (error) {
       console.error('AuthContext: 登录异常:', error)
@@ -417,19 +446,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session)
         
         if (session?.user) {
+<<<<<<< HEAD
           console.log('AuthContext: 用户已登录，并行获取用户资料')
           // 立即设置loading为false，并行获取用户资料
           setLoading(false)
           fetchUserProfile(session.user.id).catch(error => {
             console.error('初始化时获取用户资料失败:', error)
           })
+=======
+          console.log('AuthContext: 用户已登录，获取用户资料')
+          await fetchUserProfile(session.user.id)
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
         } else {
           console.log('AuthContext: 用户未登录')
           setUser(null)
           setUserProfile(null)
+<<<<<<< HEAD
           setLoading(false)
         }
         
+=======
+        }
+        
+        setLoading(false)
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
         console.log('AuthContext: 认证状态初始化完成')
       } catch (error) {
         console.error('初始化认证状态失败:', error)

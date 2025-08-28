@@ -46,6 +46,7 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
     scrollToBottom()
   }, [messages])
 
+<<<<<<< HEAD
   const callAIAPI = async (userMessage: string): Promise<Message> => {
     try {
       const response = await fetch('/api/ai-chat', {
@@ -86,6 +87,39 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
         timestamp: new Date().toLocaleTimeString(),
         type: 'text'
       }
+=======
+  const simulateAIResponse = async (userMessage: string): Promise<Message> => {
+    // 模拟AI响应延迟
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000))
+    
+    const responses: Record<string, string[]> = {
+      okr_planning: [
+        `基于你的学习目标，我建议制定以下OKR：\n\n**目标(O)**: 提升编程技能\n\n**关键结果(KR)**:\n1. 完成3个完整的项目作品\n2. 学会至少2门新的编程语言\n3. 在GitHub上获得100+ stars\n\n这个OKR符合SMART原则，你觉得怎么样？`,
+        `让我们一起分析你当前的OKR完成情况：\n\n根据你的进度数据，我发现：\n• 你在技术学习方面进展很好 ✅\n• 但在项目实践上可能需要加强 ⚠️\n\n建议调整策略：将更多时间分配给实际项目开发。`,
+        `基于你的专业方向，我推荐这样的学习路径：\n\n**第一阶段(1-2个月)**: 巩固基础\n- 数据结构与算法强化\n- 设计模式学习\n\n**第二阶段(3-4个月)**: 实战项目\n- 全栈Web项目\n- 移动端应用开发\n\n**第三阶段(5-6个月)**: 深度学习\n- 选择一个技术栈深入研究`
+      ],
+      study_help: [
+        `看起来你在这个知识点上遇到了困难。让我为你分析一下：\n\n**问题诊断**: ${userMessage}\n\n**解决建议**:\n1. 先回顾相关的基础概念\n2. 通过具体示例加深理解\n3. 多做相关练习题巩固\n\n我可以为你推荐一些优质的学习资源，需要吗？`,
+        `这是一个很好的问题！让我帮你梳理一下思路：\n\n**核心概念**: [从你的问题中提取]\n**应用场景**: 在实际项目中的使用\n**相关知识点**: 需要同时掌握的概念\n\n建议你先掌握基础理论，再通过实践加深理解。`,
+        `根据你的学习进度分析，我建议：\n\n**优势领域**: 继续保持\n**待加强领域**: 需要重点关注\n**学习建议**: 个性化学习计划\n\n我已经为你生成了详细的学习计划，要查看吗？`
+      ],
+      general: [
+        `这是个很棒的想法！让我来帮你分析一下可行性和实施步骤。\n\n基于你目前的情况，我建议这样安排...\n\n需要我为你制定详细的行动计划吗？`,
+        `我理解你的想法。基于我对你学习情况的了解，这里有几个建议：\n\n1. 首先确定优先级\n2. 分解成具体的行动步骤\n3. 设定明确的时间节点\n\n你希望从哪个方面开始呢？`,
+        `让我为你提供一些参考思路：\n\n**短期目标**: 立即可以开始的行动\n**中期规划**: 1-3个月的安排\n**长期愿景**: 学期或学年的大目标\n\n需要我帮你转化为具体的OKR吗？`
+      ]
+    }
+
+    const categoryResponses = responses[sessionType] || responses.general
+    const response = categoryResponses[Math.floor(Math.random() * categoryResponses.length)]
+    
+    return {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: response,
+      timestamp: new Date().toLocaleTimeString(),
+      type: 'text'
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
     }
   }
 
@@ -105,7 +139,11 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
     setIsLoading(true)
 
     try {
+<<<<<<< HEAD
       const aiResponse = await callAIAPI(inputValue)
+=======
+      const aiResponse = await simulateAIResponse(inputValue)
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
       setMessages(prev => [...prev, aiResponse])
     } catch (error) {
       console.error('AI response error:', error)

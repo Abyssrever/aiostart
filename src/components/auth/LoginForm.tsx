@@ -9,7 +9,11 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+<<<<<<< HEAD
 // import GitUpdateLogger from '@/components/GitUpdateLogger'
+=======
+import GitUpdateLogger from '@/components/GitUpdateLogger'
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
 
 function LoginFormContent() {
   const [email, setEmail] = useState('')
@@ -23,6 +27,7 @@ function LoginFormContent() {
   const searchParams = useSearchParams()
   const { signIn } = useAuth()
 
+<<<<<<< HEAD
   // 预加载目标页面以加快跳转速度
   useEffect(() => {
     router.prefetch('/dashboard/student')
@@ -30,6 +35,8 @@ function LoginFormContent() {
     router.prefetch('/dashboard/admin')
   }, [router])
 
+=======
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
   // 处理URL参数中的状态信息
   useEffect(() => {
     const verified = searchParams.get('verified')
@@ -72,6 +79,7 @@ function LoginFormContent() {
         return
       }
       
+<<<<<<< HEAD
       // 登录成功，立即跳转
       console.log('LoginForm: 登录成功，立即跳转')
       
@@ -84,6 +92,25 @@ function LoginFormContent() {
         // 降级方案：使用 window.location
         window.location.href = '/dashboard/student'
       }
+=======
+      // 登录成功
+      console.log('LoginForm: 登录成功，准备跳转到dashboard')
+      setSuccess('登录成功！正在跳转...')
+      
+      // 使用setTimeout确保状态更新完成后再跳转
+      setTimeout(() => {
+        console.log('LoginForm: 执行页面跳转到/dashboard')
+        try {
+          // 直接跳转到学生页面，绕过dashboard的角色检查
+          router.push('/dashboard/student')
+          console.log('LoginForm: 已执行跳转命令')
+        } catch (routeError) {
+          console.error('LoginForm: 路由跳转错误:', routeError)
+          // 如果直接跳转失败，尝试使用replace
+          router.replace('/dashboard/student')
+        }
+      }, 500) // 增加延迟以确保状态更新
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
       
     } catch (error) {
       console.error('LoginForm: 登录异常:', error)
@@ -197,7 +224,11 @@ function LoginFormContent() {
 export default function LoginForm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+<<<<<<< HEAD
       {/* <GitUpdateLogger /> */}
+=======
+      <GitUpdateLogger />
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
       <Suspense fallback={
         <Card className="w-full max-w-md mx-auto">
           <CardContent className="pt-8">

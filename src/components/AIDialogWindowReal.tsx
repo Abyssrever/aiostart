@@ -78,6 +78,7 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
     }
   }
 
+<<<<<<< HEAD
   // 当会话打开时加载数据 - 暂时跳过数据库
   useEffect(() => {
     if (isOpen) {
@@ -91,11 +92,23 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
+=======
+  // 当会话打开时加载数据
+  useEffect(() => {
+    if (isOpen && user?.id) {
+      loadSession()
+    }
+  }, [isOpen, user?.id, sessionType])
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading || !currentSession || !user?.id) return
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
 
     setIsLoading(true)
     const userMessageContent = inputValue.trim()
     setInputValue('')
 
+<<<<<<< HEAD
     // 添加用户消息到UI（临时显示）
     const tempUserMessage = {
       id: Date.now().toString(),
@@ -143,6 +156,29 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
       }
       setMessages(prev => [...prev, errorMessage])
       
+=======
+    try {
+      const { data, error } = await ChatService.sendMessage(
+        currentSession.id,
+        userMessageContent,
+        user.id
+      )
+
+      if (error) {
+        console.error('发送消息失败:', error)
+        // 恢复输入内容
+        setInputValue(userMessageContent)
+        return
+      }
+
+      if (data) {
+        // 添加新消息到界面
+        setMessages(prev => [...prev, data.userMessage, data.aiMessage])
+      }
+    } catch (error) {
+      console.error('发送消息异常:', error)
+      setInputValue(userMessageContent) // 恢复输入内容
+>>>>>>> bcb66815474adaa2f542b639cde27c0e04e13652
     } finally {
       setIsLoading(false)
     }
