@@ -1,52 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readdir, stat } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
-    const category = searchParams.get('category') || 'general'
+    const category = searchParams.get('category')
 
     if (!userId) {
       return NextResponse.json({ error: '用户ID是必需的' }, { status: 400 })
     }
 
-    const uploadDir = join(process.cwd(), 'uploads', userId, category)
-    
-    if (!existsSync(uploadDir)) {
-      return NextResponse.json({ success: true, files: [] })
-    }
-
-    const files = await readdir(uploadDir)
-    const fileInfos = await Promise.all(
-      files.map(async (fileName) => {
-        const filePath = join(uploadDir, fileName)
-        const stats = await stat(filePath)
-        
-        // 从文件名解析时间戳和原始名称
-        const parts = fileName.split('_')
-        const timestamp = parts[0]
-        const originalName = parts.slice(1).join('_')
-        
-        return {
-          id: `${userId}_${timestamp}`,
-          name: originalName,
-          fileName: fileName,
-          path: `/api/files/view/${userId}/${category}/${fileName}`,
-          size: stats.size,
-          category,
-          uploadedAt: new Date(parseInt(timestamp)).toISOString(),
-          userId,
-          // 根据文件扩展名判断类型
-          type: getFileType(fileName)
+    // 创建 Supabase 服务端客户端
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
         }
-      })
+      }
     )
 
-    // 按上传时间倒序排列
-    fileInfos.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+    // 构建查询
+    let query = supabase
+      .from('file_attachments')
+      .select('*')
+      .eq('uploaded_by', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    // 如果指定了类别，则过滤类别
+    if (category && category !== 'all') {
+      query = query.eq('category', category)
+    }
+
+    const { data: files, error } = await query
+
+    if (error) {
+      console.error('数据库查询错误:', error)
+      return NextResponse.json({ error: '获取文件列表失败' }, { status: 500 })
+    }
+
+    // 转换为前端需要的格式
+    const fileInfos = files.map((file: any) => ({
+      id: file.id,
+      name: file.original_name,
+      originalName: file.original_name,
+      fileName: file.stored_name,
+      path: `/api/files/view/${file.id}`, // 新的API路径格式
+      publicUrl: file.public_url,
+      size: file.file_size,
+      type: file.mime_type,
+      category: file.category,
+      uploadedAt: file.created_at,
+      userId: file.uploaded_by,
+      bucket: file.storage_bucket,
+      storagePath: file.storage_path,
+      accessLevel: file.access_level,
+      description: file.description,
+      tags: file.tags || []
+    }))
 
     return NextResponse.json({
       success: true,
@@ -57,27 +73,4 @@ export async function GET(request: NextRequest) {
     console.error('文件列表获取错误:', error)
     return NextResponse.json({ error: '获取文件列表失败' }, { status: 500 })
   }
-}
-
-function getFileType(fileName: string): string {
-  const ext = fileName.split('.').pop()?.toLowerCase()
-  
-  const typeMap: { [key: string]: string } = {
-    'txt': 'text/plain',
-    'md': 'text/markdown',
-    'pdf': 'application/pdf',
-    'doc': 'application/msword',
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'xls': 'application/vnd.ms-excel',
-    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'ppt': 'application/vnd.ms-powerpoint',
-    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'png': 'image/png',
-    'gif': 'image/gif',
-    'json': 'application/json'
-  }
-  
-  return typeMap[ext || ''] || 'application/octet-stream'
 }
