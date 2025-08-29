@@ -45,7 +45,7 @@ export async function GET(
 
     const contentType = contentTypeMap[fileExt] || 'application/octet-stream'
 
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(fileBuffer as unknown as ReadableStream, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `inline; filename="${fileName}"`,

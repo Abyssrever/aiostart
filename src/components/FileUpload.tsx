@@ -163,7 +163,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         file,
         progress: 0,
         status: error ? 'error' as const : 'uploading' as const,
-        error
+        error: error || undefined
       }
     })
 

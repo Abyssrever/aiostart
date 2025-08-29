@@ -86,8 +86,14 @@ const FileManager: React.FC<FileManagerProps> = ({
     }
   }
 
-  const handleUploadComplete = (uploadedFiles: FileInfo[]) => {
-    setFiles(prev => [...uploadedFiles, ...prev])
+  const handleUploadComplete = (uploadedFiles: any[]) => {
+    // 转换上传文件格式为FileInfo格式
+    const convertedFiles = uploadedFiles.map(file => ({
+      ...file,
+      fileName: file.fileName || file.name,
+      userId: file.userId || user?.id || ''
+    }))
+    setFiles(prev => [...convertedFiles, ...prev])
   }
 
   const handleDeleteFile = async (fileId: string) => {
