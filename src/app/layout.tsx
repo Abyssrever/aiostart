@@ -17,7 +17,12 @@ export const metadata: Metadata = {
   title: "启明星平台 - 智能化教育管理系统",
   description: "基于AI的智能化教育管理平台，为学生、教师和管理员提供全方位的教育服务",
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' }
+    ],
+  },
+  other: {
+    'content-type': 'text/html; charset=utf-8',
   },
 };
 

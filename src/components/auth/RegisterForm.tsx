@@ -158,6 +158,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
               placeholder="请输入您的姓名"
               value={formData.name}
               onChange={handleChange}
+              autoComplete="name"
               required
               disabled={loading}
             />
@@ -186,6 +187,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
               placeholder="请输入学号"
               value={formData.student_id}
               onChange={handleChange}
+              autoComplete="off"
               disabled={loading}
             />
           </div>
@@ -199,6 +201,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
               placeholder="请输入邮箱"
               value={formData.email}
               onChange={handleChange}
+              autoComplete="email"
               required
               disabled={loading}
             />
@@ -214,6 +217,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 placeholder="请输入密码（至少6位）"
                 value={formData.password}
                 onChange={handleChange}
+                autoComplete="new-password"
                 required
                 disabled={loading}
                 className="pr-10"
@@ -245,6 +249,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 placeholder="请再次输入密码"
                 value={formData.confirmPassword}
                 onChange={handleChange}
+                autoComplete="new-password"
                 required
                 disabled={loading}
                 className="pr-10"
