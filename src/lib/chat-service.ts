@@ -99,11 +99,32 @@ export class ChatService {
   }
 
   // 添加消息到会话
-  static async addMessageToSession(messageData: NewChatMessage): Promise<{ data: ChatMessage | null; error: any }> {
+  static async addMessageToSession(messageData: NewChatMessage & { user_id?: string }): Promise<{ data: ChatMessage | null; error: any }> {
     try {
+      // 转换字段名：message_type -> role，但保留message_type用于前端显示
+      const adaptedData = {
+        ...messageData,
+        role: messageData.message_type
+        // 不移除message_type字段，让前端可以正确识别消息类型
+      };
+      
+      // 确保有user_id字段
+      if (!adaptedData.user_id && messageData.session_id) {
+        // 从session获取user_id
+        const { data: session } = await dbClient
+          .from('chat_sessions')
+          .select('user_id')
+          .eq('id', messageData.session_id)
+          .single();
+          
+        if (session) {
+          adaptedData.user_id = session.user_id;
+        }
+      }
+
       const { data, error } = await dbClient
         .from('chat_messages')
-        .insert(messageData)
+        .insert(adaptedData)
         .select()
         .single()
 
@@ -135,6 +156,8 @@ export class ChatService {
       // 2. 添加用户消息
       const { data: userMsg, error: userMsgError } = await this.addMessageToSession({
         session_id: sessionId,
+        user_id: userId,
+        role: 'user',
         message_type: 'user',
         content: userMessage
       })
@@ -148,7 +171,7 @@ export class ChatService {
         sessionId: sessionId,
         sessionType: sessionData?.session_type || 'general',
         conversationHistory: sessionData?.messages?.slice(-10).map(msg => ({
-          role: msg.message_type === 'user' ? 'user' : 'assistant',
+          role: msg.role === 'user' ? 'user' : 'assistant', // 使用role字段而不是message_type
           content: msg.content,
           timestamp: msg.created_at
         })) || []
@@ -162,6 +185,8 @@ export class ChatService {
       // 5. 添加AI回复消息
       const { data: aiMsg, error: aiMsgError } = await this.addMessageToSession({
         session_id: sessionId,
+        user_id: userId,
+        role: 'assistant',
         message_type: 'assistant',
         content: aiResponse,
         response_time_ms: responseTime,
@@ -172,14 +197,8 @@ export class ChatService {
         return { data: null, error: aiMsgError }
       }
 
-      // 6. 更新会话的最后消息时间
-      await dbClient
-        .from('chat_sessions')
-        .update({ 
-          last_message_at: new Date().toISOString(),
-          message_count: (sessionData?.message_count || 0) + 2
-        })
-        .eq('id', sessionId)
+      // 6. 数据库触发器会自动更新会话的最后消息时间和消息计数
+      // 无需手动更新，触发器已处理
 
       return { 
         data: { 
@@ -194,7 +213,7 @@ export class ChatService {
     }
   }
 
-  // AI回复接口 - 集成AI服务管理器
+  // AI回复接口 - 通过API路由调用AI服务
   static async generateAIResponse(
     userMessage: string, 
     userId?: string, 
@@ -205,33 +224,35 @@ export class ChatService {
     }
   ): Promise<string> {
     try {
-      console.log('🤖 调用AI服务生成回复')
+      console.log('🤖 调用AI服务生成回复 - 通过API路由')
       console.log('📤 用户消息:', userMessage)
       
-      // 动态导入AI服务管理器，避免服务端渲染问题
-      const { AIServiceManager } = await import('./ai-service-manager')
-      const aiManager = AIServiceManager.getInstance()
+      // 使用API路由调用AI服务，确保在服务端环境中执行
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          sessionType: sessionContext?.sessionType || 'general',
+          conversationHistory: sessionContext?.conversationHistory || []
+        })
+      })
       
-      // 构造AI请求
-      const aiRequest = {
-        message: userMessage,
-        userId: userId,
-        sessionId: sessionContext?.sessionId,
-        sessionType: sessionContext?.sessionType || 'general',
-        conversationHistory: sessionContext?.conversationHistory || [],
-        metadata: {
-          platform: 'qiming-star',
-          timestamp: new Date().toISOString()
+      const data = await response.json()
+      
+      if (data.success) {
+        console.log('✅ AI回复成功:', data.content)
+        return data.content
+      } else {
+        // 如果服务返回了内容（即使success为false），直接返回内容而不是抛出错误
+        if (data.content) {
+          console.warn('⚠️ AI服务部分失败，但返回了响应:', data.content)
+          return data.content
         }
+        throw new Error(data.error || 'AI服务调用失败')
       }
-      
-      console.log('📋 AI请求参数:', aiRequest)
-      
-      // 调用AI服务
-      const aiResponse = await aiManager.sendAIRequest(aiRequest)
-      console.log('✅ AI回复成功:', aiResponse.content)
-      
-      return aiResponse.content
       
     } catch (error) {
       console.error('❌ AI服务调用失败:', error)
@@ -246,7 +267,10 @@ export class ChatService {
   static async directAIChat(
     userMessage: string,
     sessionType: 'general' | 'okr_planning' | 'study_help' | 'career_guidance' = 'general',
-    conversationHistory: any[] = []
+    conversationHistory: any[] = [],
+    sessionId?: string,
+    userId?: string,
+    userProfile?: any
   ): Promise<string> {
     console.log('🚀 直接AI对话模式 - 通过API路由')
     
@@ -259,7 +283,10 @@ export class ChatService {
         body: JSON.stringify({
           message: userMessage,
           sessionType,
-          conversationHistory
+          conversationHistory,
+          sessionId,
+          userId,
+          userProfile
         })
       })
       

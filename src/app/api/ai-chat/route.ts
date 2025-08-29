@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
     console.log('🚀 AI Chat API 被调用')
     
     const body = await request.json()
-    const { message, sessionType = 'general', conversationHistory = [] } = body
+    const { message, sessionType = 'general', conversationHistory = [], sessionId, userId, userProfile } = body
     
-    console.log('📤 收到请求:', { message, sessionType })
+    console.log('📤 收到请求:', { message, sessionType, sessionId, userId })
     
     // 使用AI服务管理器处理请求
     const aiManager = AIServiceManager.getInstance()
@@ -17,6 +17,9 @@ export async function POST(request: NextRequest) {
       message,
       sessionType,
       conversationHistory,
+      sessionId,
+      userId,
+      userProfile,
       metadata: {
         platform: 'qiming-star',
         timestamp: new Date().toISOString()

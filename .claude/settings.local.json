@@ -25,7 +25,11 @@
       "Bash(gh:*)",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" --version)",
       "Bash(\"C:\\Program Files\\GitHub CLI\\gh.exe\" auth login)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run test-db:*)",
+      "Bash(curl:*)",
+      "Bash(npm run lint)",
+      "Bash(npx next:*)"
     ],
     "deny": [],
     "ask": []

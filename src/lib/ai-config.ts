@@ -62,7 +62,8 @@ export const DEFAULT_AI_CONFIG: AIServiceConfig = {
 // 调试环境变量
 console.log('🌍 环境变量调试:', {
   AI_PROVIDER: process.env.AI_PROVIDER,
-  AI_WEBHOOK_URL: process.env.AI_WEBHOOK_URL ? '已配置' : '未配置',
+  AI_WEBHOOK_URL: process.env.AI_WEBHOOK_URL,
+  AI_WEBHOOK_URL_STATUS: process.env.AI_WEBHOOK_URL ? '已配置' : '未配置',
   AI_TIMEOUT: process.env.AI_TIMEOUT
 })
 // 环境变量AI配置

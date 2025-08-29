@@ -250,7 +250,9 @@ export type Database = {
         Row: {
           id: string
           session_id: string
-          message_type: 'user' | 'assistant' | 'system'
+          user_id: string
+          role: 'user' | 'assistant' | 'system'
+          message_type: 'user' | 'assistant' | 'system' | null
           content: string
           metadata: any | null
           tokens_used: number | null
@@ -260,7 +262,9 @@ export type Database = {
         Insert: {
           id?: string
           session_id: string
-          message_type: 'user' | 'assistant' | 'system'
+          user_id?: string
+          role: 'user' | 'assistant' | 'system'
+          message_type?: 'user' | 'assistant' | 'system' | null
           content: string
           metadata?: any | null
           tokens_used?: number | null

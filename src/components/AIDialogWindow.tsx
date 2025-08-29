@@ -130,6 +130,8 @@ const AIDialogWindow: React.FC<AIDialogWindowProps> = ({
               variant="ghost"
               className="text-white hover:bg-white/20 p-2"
               onClick={() => setIsMinimized(!isMinimized)}
+              title={isMinimized ? "最大化窗口" : "最小化窗口"}
+              aria-label={isMinimized ? "最大化窗口" : "最小化窗口"}
             >
               {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </Button>
@@ -138,6 +140,8 @@ const AIDialogWindow: React.FC<AIDialogWindowProps> = ({
               variant="ghost"
               className="text-white hover:bg-white/20 p-2"
               onClick={onClose}
+              title="关闭对话窗口"
+              aria-label="关闭对话窗口"
             >
               <X className="w-4 h-4" />
             </Button>

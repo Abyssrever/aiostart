@@ -3,10 +3,11 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { X, Send, Minimize2, Maximize2, RotateCcw, Bot, User } from 'lucide-react'
+import { X, Send, Minimize2, Maximize2, RotateCcw, Bot } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { ChatService, ChatMessage, ChatSession } from '@/lib/chat-service'
+import AIMessage from '@/components/AIMessage'
 
 interface AIDialogWindowRealProps {
   isOpen: boolean
@@ -26,6 +27,8 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null)
   const [sessionLoading, setSessionLoading] = useState(true)
+  const [streamingMessage, setStreamingMessage] = useState<string>('')
+  const [isStreaming, setIsStreaming] = useState(false)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -37,7 +40,7 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, streamingMessage])
 
   // 聚焦输入框
   useEffect(() => {
@@ -80,10 +83,43 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
 
   // 当会话打开时加载数据
   useEffect(() => {
-    if (isOpen && user?.id) {
-      loadSession()
+    if (isOpen) {
+      if (user?.id) {
+        // 用户已登录，加载数据库会话
+        loadSession()
+      } else {
+        // 用户未登录，从localStorage加载临时会话
+        loadTemporarySession()
+      }
     }
   }, [isOpen, user?.id, sessionType])
+  
+  // 加载临时会话（未登录用户）
+  const loadTemporarySession = () => {
+    setSessionLoading(true)
+    try {
+      const key = `temp_chat_${sessionType}`
+      const savedMessages = localStorage.getItem(key)
+      if (savedMessages) {
+        const parsedMessages = JSON.parse(savedMessages)
+        setMessages(parsedMessages)
+      }
+    } catch (error) {
+      console.error('加载临时会话失败:', error)
+    } finally {
+      setSessionLoading(false)
+    }
+  }
+  
+  // 保存临时会话（未登录用户）
+  const saveTemporarySession = (newMessages: ChatMessage[]) => {
+    try {
+      const key = `temp_chat_${sessionType}`
+      localStorage.setItem(key, JSON.stringify(newMessages))
+    } catch (error) {
+      console.error('保存临时会话失败:', error)
+    }
+  }
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return
@@ -95,28 +131,12 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
     try {
       // 如果有session，使用数据库方式；否则使用直接AI对话
       if (currentSession && user?.id) {
-        const { data, error } = await ChatService.sendMessage(
-          currentSession.id,
-          userMessageContent,
-          user.id
-        )
-
-        if (error) {
-          console.error('发送消息失败:', error)
-          // 恢复输入内容
-          setInputValue(userMessageContent)
-          return
-        }
-
-        if (data) {
-          // 添加新消息到界面
-          setMessages(prev => [...prev, data.userMessage, data.aiMessage])
-        }
-      } else {
-        // 添加用户消息到UI（临时显示）
+        // 先立即显示用户消息
         const tempUserMessage: ChatMessage = {
           id: Date.now().toString(),
-          session_id: 'temp',
+          session_id: currentSession.id,
+          user_id: user.id,
+          role: 'user' as const,
           message_type: 'user' as const,
           content: userMessageContent,
           metadata: {},
@@ -126,42 +146,139 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
         }
         setMessages(prev => [...prev, tempUserMessage])
 
-        console.log('🚀 发送消息给AI:', userMessageContent)
-        
-        // 直接调用AI，跳过数据库
-        const aiReply = await ChatService.directAIChat(
+        const { data, error } = await ChatService.sendMessage(
+          currentSession.id,
           userMessageContent,
-          sessionType,
-          messages.map(msg => ({
-            role: msg.message_type === 'user' ? 'user' : 'assistant',
-            content: msg.content,
-            timestamp: msg.created_at
-          }))
+          user.id
         )
 
-        console.log('✅ 收到AI回复:', aiReply)
+        if (error) {
+          console.error('发送消息失败:', error)
+          // 恢复输入内容，移除临时显示的用户消息
+          setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id))
+          setInputValue(userMessageContent)
+          return
+        }
 
-        // 添加AI回复到UI
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
+        if (data) {
+          // 替换临时用户消息为数据库版本，并添加AI消息
+          setMessages(prev => {
+            const withoutTemp = prev.filter(msg => msg.id !== tempUserMessage.id)
+            return [...withoutTemp, data.userMessage, data.aiMessage]
+          })
+        }
+      } else {
+        // 添加用户消息到UI（临时显示）
+        const tempUserMessage: ChatMessage = {
+          id: Date.now().toString(),
           session_id: 'temp',
-          message_type: 'assistant' as const,
-          content: aiReply,
+          user_id: user?.id || 'temp-user',
+          role: 'user' as const,
+          message_type: 'user' as const,
+          content: userMessageContent,
           metadata: {},
           tokens_used: null,
           response_time_ms: null,
           created_at: new Date().toISOString()
         }
+        const updatedMessages = [...messages, tempUserMessage]
+        setMessages(updatedMessages)
         
-        setMessages(prev => [...prev, aiMessage])
+        // 保存临时会话（未登录用户）
+        if (!user?.id) {
+          saveTemporarySession(updatedMessages)
+        }
+
+        console.log('🚀 发送消息给AI:', userMessageContent)
+        
+        // 开始流式响应
+        setIsStreaming(true)
+        setStreamingMessage('')
+        
+        try {
+          // 直接调用AI，跳过数据库
+          const aiReply = await ChatService.directAIChat(
+            userMessageContent,
+            sessionType,
+            messages.map(msg => ({
+              role: msg.message_type === 'user' ? 'user' : 'assistant',
+              content: msg.content,
+              timestamp: msg.created_at
+            })),
+            currentSession?.id || `temp-${sessionType}-${Date.now()}`, // sessionId
+            user?.id,  // userId
+            user ? {   // userProfile
+              name: user.name,
+              email: user.email,
+              roles: user.roles,
+              student_id: user.student_id,
+              grade: user.grade,
+              major: user.major,
+              class_name: user.class_name
+            } : undefined
+          )
+
+          console.log('✅ 收到AI回复:', aiReply)
+
+          // 流式显示AI回复
+          let currentText = ''
+          const chars = aiReply.split('')
+          
+          for (let i = 0; i < chars.length; i++) {
+            currentText += chars[i]
+            setStreamingMessage(currentText)
+            
+            // 控制流式显示速度
+            await new Promise(resolve => setTimeout(resolve, 30))
+          }
+          
+          // 流式显示完成后，添加正式消息并清除流式状态
+          setTimeout(() => {
+            const aiMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              session_id: 'temp',
+              user_id: user?.id || 'temp-user',
+              role: 'assistant' as const,
+              message_type: 'assistant' as const,
+              content: aiReply,
+              metadata: {},
+              tokens_used: null,
+              response_time_ms: null,
+              created_at: new Date().toISOString()
+            }
+            
+            setMessages(prev => {
+              const newMessages = [...prev, aiMessage]
+              // 保存临时会话（未登录用户）
+              if (!user?.id) {
+                saveTemporarySession(newMessages)
+              }
+              return newMessages
+            })
+            setIsStreaming(false)
+            setStreamingMessage('')
+          }, 500)
+          
+        } catch (streamError) {
+          console.error('流式响应处理失败:', streamError)
+          setIsStreaming(false)
+          setStreamingMessage('')
+          throw streamError // 重新抛出异常，让外层catch处理
+        }
       }
     } catch (error) {
       console.error('❌ AI对话失败:', error)
+      
+      // 确保清除流式状态
+      setIsStreaming(false)
+      setStreamingMessage('')
       
       // 添加错误消息
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         session_id: 'temp',
+        user_id: user?.id || 'temp-user',
+        role: 'assistant' as const,
         message_type: 'assistant' as const,
         content: '抱歉，AI服务暂时不可用，请稍后重试。',
         metadata: {},
@@ -189,24 +306,28 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
   }
 
   const clearMessages = async () => {
-    if (!currentSession || !user?.id) return
-    
     if (!confirm('确定要清空当前对话吗？')) return
 
     try {
-      // 归档当前会话
-      await ChatService.archiveSession(currentSession.id)
-      
-      // 创建新会话
-      const { data: newSession, error } = await ChatService.getOrCreateSession(user.id, sessionType)
-      
-      if (error) {
-        console.error('创建新会话失败:', error)
-        return
-      }
+      if (currentSession && user?.id) {
+        // 已登录用户：归档当前会话并创建新会话
+        await ChatService.archiveSession(currentSession.id)
+        
+        const { data: newSession, error } = await ChatService.getOrCreateSession(user.id, sessionType)
+        
+        if (error) {
+          console.error('创建新会话失败:', error)
+          return
+        }
 
-      if (newSession) {
-        setCurrentSession(newSession)
+        if (newSession) {
+          setCurrentSession(newSession)
+          setMessages([])
+        }
+      } else {
+        // 未登录用户：清空localStorage中的临时会话
+        const key = `temp_chat_${sessionType}`
+        localStorage.removeItem(key)
         setMessages([])
       }
     } catch (error) {
@@ -241,8 +362,8 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
       <div className={`bg-white rounded-lg shadow-2xl transition-all duration-300 ${
         isMinimized 
           ? 'w-96 h-16' 
-          : 'w-full max-w-4xl h-full max-h-[90vh]'
-      }`}>
+          : 'w-full max-w-4xl h-full max-h-[85vh]'
+      } mb-8`}>
         {/* 标题栏 */}
         <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-t-lg">
           <div className="flex items-center space-x-3">
@@ -274,6 +395,8 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
               variant="ghost"
               className="text-white hover:bg-white/20 p-2"
               onClick={() => setIsMinimized(!isMinimized)}
+              title={isMinimized ? "最大化窗口" : "最小化窗口"}
+              aria-label={isMinimized ? "最大化窗口" : "最小化窗口"}
             >
               {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
             </Button>
@@ -282,6 +405,8 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
               variant="ghost"
               className="text-white hover:bg-white/20 p-2"
               onClick={onClose}
+              title="关闭对话窗口"
+              aria-label="关闭对话窗口"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -355,55 +480,38 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
               ) : (
                 <>
                   {messages.map((message) => (
-                    <div key={message.id} className={`flex ${
-                      message.message_type === 'user' ? 'justify-end' : 'justify-start'
-                    }`}>
-                      <div className={`flex items-start space-x-3 max-w-[80%] ${
-                        message.message_type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-                      }`}>
-                        {/* 头像 */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          message.message_type === 'user' 
-                            ? 'bg-blue-500 text-white' 
-                            : 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white'
-                        }`}>
-                          {message.message_type === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-                        </div>
-                        
-                        {/* 消息内容 */}
-                        <div className={`rounded-2xl px-4 py-3 ${
-                          message.message_type === 'user'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                            {message.content}
-                          </p>
-                          <p className={`text-xs mt-2 ${
-                            message.message_type === 'user' ? 'text-blue-100' : 'text-gray-500'
-                          }`}>
-                            {new Date(message.created_at).toLocaleTimeString('zh-CN', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <AIMessage 
+                      key={message.id} 
+                      message={message}
+                    />
                   ))}
                   
+                  {/* 流式消息显示 */}
+                  {isStreaming && (
+                    <AIMessage
+                      message={{
+                        id: 'streaming',
+                        message_type: 'assistant',
+                        content: '',
+                        created_at: new Date().toISOString()
+                      }}
+                      isStreaming={true}
+                      streamingContent={streamingMessage}
+                    />
+                  )}
+                  
                   {/* 加载指示器 */}
-                  {isLoading && (
-                    <div className="flex justify-start">
+                  {isLoading && !isStreaming && (
+                    <div className="flex justify-start mb-4">
                       <div className="flex items-start space-x-3 max-w-[80%]">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white flex items-center justify-center flex-shrink-0">
                           <Bot className="w-4 h-4" />
                         </div>
-                        <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                        <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
                           <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                           </div>
                         </div>
                       </div>

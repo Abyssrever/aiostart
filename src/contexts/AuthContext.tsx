@@ -389,6 +389,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // 登出
   const signOut = async () => {
+    console.log('AuthContext: 用户登出')
+    setUser(null)
+    setSession(null)
+    setUserProfile(null)
     await supabase.auth.signOut()
   }
 
