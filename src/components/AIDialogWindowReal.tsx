@@ -3,11 +3,13 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { X, Send, Minimize2, Maximize2, RotateCcw, Bot } from 'lucide-react'
+import { X, Send, Minimize2, Maximize2, RotateCcw, Bot, Paperclip } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { ChatService, ChatMessage, ChatSession } from '@/lib/chat-service'
 import AIMessage from '@/components/AIMessage'
+import FileUpload from '@/components/FileUpload'
+import FileViewer from '@/components/FileViewer'
 
 interface AIDialogWindowRealProps {
   isOpen: boolean
@@ -29,6 +31,8 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
   const [sessionLoading, setSessionLoading] = useState(true)
   const [streamingMessage, setStreamingMessage] = useState<string>('')
   const [isStreaming, setIsStreaming] = useState(false)
+  const [showFileUpload, setShowFileUpload] = useState(false)
+  const [attachedFiles, setAttachedFiles] = useState<any[]>([])
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -524,7 +528,61 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
 
             {/* 输入区域 */}
             <div className="border-t bg-gray-50 p-4">
+              {/* 已附加的文件显示 */}
+              {attachedFiles.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  <div className="text-xs text-gray-600">附加文件:</div>
+                  {attachedFiles.map((file, index) => (
+                    <FileViewer
+                      key={index}
+                      file={file}
+                      showActions={false}
+                      className="text-xs"
+                    />
+                  ))}
+                </div>
+              )}
+              
+              {/* 文件上传区域 */}
+              {showFileUpload && (
+                <div className="mb-3">
+                  <FileUpload
+                    category="chat"
+                    chatSessionId={currentSession?.id}
+                    maxSize={10}
+                    multiple={true}
+                    onUploadComplete={(files) => {
+                      setAttachedFiles(prev => [...prev, ...files])
+                      setShowFileUpload(false)
+                    }}
+                    onUploadError={(error) => {
+                      console.error('文件上传失败:', error)
+                    }}
+                    className="max-h-48 overflow-y-auto"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFileUpload(false)}
+                    className="mt-2 text-gray-500"
+                  >
+                    取消上传
+                  </Button>
+                </div>
+              )}
+              
               <div className="flex items-end space-x-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFileUpload(!showFileUpload)}
+                  className="text-gray-500 hover:text-gray-700 p-2"
+                  disabled={isLoading || sessionLoading}
+                  title="添加文件"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </Button>
+                
                 <div className="flex-1">
                   <Input
                     ref={inputRef}
@@ -536,9 +594,10 @@ const AIDialogWindowReal: React.FC<AIDialogWindowRealProps> = ({
                     disabled={isLoading || sessionLoading}
                   />
                 </div>
+                
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!inputValue.trim() || isLoading || sessionLoading}
+                  disabled={(!inputValue.trim() && attachedFiles.length === 0) || isLoading || sessionLoading}
                   className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white px-6"
                 >
                   {isLoading ? (

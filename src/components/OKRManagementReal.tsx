@@ -10,13 +10,15 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Edit, Trash2, Target, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
+import { Plus, Edit, Trash2, Target, CheckCircle, Clock, AlertTriangle, Paperclip } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { OKRServiceFixed } from '@/lib/okr-service-fixed'
 import { OKRServiceAPI } from '@/lib/okr-service-api'
 import { OKRWithKeyResults, NewOKR, NewKeyResult } from '@/types/okr'
 import { useToast, ToastContainer } from '@/components/ui/toast'
+import FileUpload from '@/components/FileUpload'
+import FileManager from '@/components/FileManager'
 
 // 动态选择服务：开发环境用Fixed服务，生产环境用API服务
 const OKRService = process.env.NODE_ENV === 'development' ? OKRServiceFixed : OKRServiceAPI
@@ -438,6 +440,25 @@ export default function OKRManagementReal({ userRole = 'student', onDataChange }
                       </Select>
                     </div>
                   </div>
+                  
+                  {/* 文件上传区域 */}
+                  <div>
+                    <Label>相关文档</Label>
+                    <FileUpload
+                      category="okr"
+                      okrId={selectedOKR?.id}
+                      maxSize={10}
+                      multiple={true}
+                      onUploadComplete={(files) => {
+                        console.log('OKR文件上传完成:', files)
+                      }}
+                      onUploadError={(error) => {
+                        showError(`文件上传失败: ${error}`)
+                      }}
+                      className="mt-2"
+                    />
+                  </div>
+                  
                   {okrValidationError && (
                     <div className="text-red-600 text-sm font-medium mb-2">
                       {okrValidationError}
