@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseServer, supabaseServerAnon } from '@/lib/supabase-server'
+import { supabaseServer } from '@/lib/supabase-server'
 import { normalizeEmail, isValidEmail } from '@/lib/auth-utils'
 
 export async function POST(request: NextRequest) {

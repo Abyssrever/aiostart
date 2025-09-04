@@ -9,19 +9,9 @@ export const supabase = typeof window !== 'undefined'
   ? createBrowserClient(supabaseUrl, supabaseAnonKey)
   : createClient(supabaseUrl, supabaseAnonKey)
 
-// 创建开发环境专用客户端（绕过RLS）
-// 注意：在生产环境中不应该在客户端暴露service role key
-const serviceRoleKey = process.env.NODE_ENV === 'development' 
-  ? process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
-  : null
-export const supabaseAdmin = serviceRoleKey 
-  ? createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : supabase // 如果没有service key，回退到普通客户端
+// 注意：Service Role Key 绝不应在客户端暴露
+// 仅在服务端API路由中使用 supabaseAdmin
+export const supabaseAdmin = supabase // 客户端统一使用普通权限客户端
 
 // 创建服务端客户端（用于服务端渲染）
 export const createServerClient = () => {

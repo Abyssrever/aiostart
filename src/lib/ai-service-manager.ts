@@ -48,6 +48,9 @@ export class AIServiceManager {
         let response: AIResponse
 
         switch (this.config.provider) {
+          case 'dify':
+            response = await this.callDify(request)
+            break
           case 'n8n':
             response = await this.callN8nWebhook(request)
             break
@@ -95,9 +98,10 @@ export class AIServiceManager {
   /**
    * N8N工作流调用 - 适配启明星平台格式
    */
-  private async callN8nWebhook(request: AIRequest): Promise<AIResponse> {
-    if (!this.config.webhookUrl) {
-      throw new Error('N8N webhook URL未配置')
+  private async callN8nWebhook(request: AIRequest, workflowType: string = 'chat'): Promise<AIResponse> {
+    const webhookUrl = this.getN8nWebhookUrl(workflowType)
+    if (!webhookUrl) {
+      throw new Error(`N8N ${workflowType} webhook URL未配置`)
     }
 
     try {
@@ -112,10 +116,10 @@ export class AIServiceManager {
         metadata: request.metadata
       }
 
-      console.log('🚀 调用N8N工作流:', this.config.webhookUrl)
+      console.log('🚀 调用N8N工作流:', webhookUrl)
       console.log('📤 请求数据:', n8nRequest)
 
-      const response = await fetch(this.config.webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
@@ -124,7 +128,7 @@ export class AIServiceManager {
           'Accept-Charset': 'utf-8'
         },
         body: JSON.stringify(n8nRequest),
-        signal: AbortSignal.timeout(this.config.timeout || 30000)
+        signal: AbortSignal.timeout(this.config.timeout || 15000)
       })
 
       console.log(`📊 N8N响应状态: ${response.status}`)
@@ -204,7 +208,7 @@ export class AIServiceManager {
           max_tokens: this.config.maxTokens,
           temperature: this.config.temperature
         }),
-        signal: AbortSignal.timeout(this.config.timeout || 30000)
+        signal: AbortSignal.timeout(this.config.timeout || 15000)
       })
 
       if (!response.ok) {
@@ -219,6 +223,27 @@ export class AIServiceManager {
       }
     } catch (error) {
       console.error('OpenAI API调用异常:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Dify API调用
+   */
+  private async callDify(request: AIRequest): Promise<AIResponse> {
+    const difyConfig = this.config.dify
+    if (!difyConfig?.apiKey || !difyConfig?.baseUrl) {
+      throw new Error('Dify配置不完整')
+    }
+
+    try {
+      // 使用优化版本的DifyService处理请求（支持Agent App流式响应）
+      const { getDifyServiceV2 } = await import('./dify-service-v2')
+      const difyService = getDifyServiceV2(difyConfig)
+      
+      return await difyService.sendChatMessage(request)
+    } catch (error) {
+      console.error('Dify API调用异常:', error)
       throw error
     }
   }
@@ -247,7 +272,7 @@ export class AIServiceManager {
           ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` })
         },
         body: JSON.stringify(request),
-        signal: AbortSignal.timeout(this.config.timeout || 30000)
+        signal: AbortSignal.timeout(this.config.timeout || 15000)
       })
 
       if (!response.ok) {
@@ -259,6 +284,56 @@ export class AIServiceManager {
     } catch (error) {
       console.error('自定义API调用异常:', error)
       throw error
+    }
+  }
+
+  /**
+   * 解析Dify响应
+   */
+  private parseDifyResponse(data: any): AIResponse {
+    console.log('🔍 解析Dify响应:', data)
+    
+    let content = '抱歉，AI服务暂时不可用，请稍后再试。'
+    let tokensUsed = 0
+    let conversationId = ''
+    
+    if (data && typeof data === 'object') {
+      // Dify API 标准响应格式
+      if (data.answer) {
+        content = data.answer
+      } else if (data.message) {
+        content = data.message
+      } else if (data.content) {
+        content = data.content
+      }
+      
+      // 提取token使用量
+      if (data.metadata?.usage) {
+        tokensUsed = data.metadata.usage.total_tokens || 
+                    (data.metadata.usage.prompt_tokens || 0) + (data.metadata.usage.completion_tokens || 0)
+      }
+      
+      // 提取会话ID
+      if (data.conversation_id) {
+        conversationId = data.conversation_id
+      }
+    }
+    
+    console.log('✅ 解析出的Dify回复:', content)
+    
+    return {
+      content: content,
+      tokensUsed: tokensUsed || Math.floor(content.length / 4), // 粗略估算
+      responseTime: 0, // 将在调用处计算
+      confidence: 0.9,
+      suggestions: [],
+      metadata: {
+        source: 'dify-api',
+        conversationId: conversationId,
+        timestamp: new Date().toISOString(),
+        usage: data.metadata?.usage,
+        retriever_resources: data.metadata?.retriever_resources || []
+      }
     }
   }
 
@@ -351,6 +426,102 @@ export class AIServiceManager {
     } catch (error) {
       this.serviceStatus = AIServiceStatus.ERROR
       return false
+    }
+  }
+
+  /**
+   * 获取N8N工作流URL
+   */
+  private getN8nWebhookUrl(workflowType: string): string {
+    const workflows = this.config.n8nWorkflows
+    if (!workflows) {
+      return this.config.webhookUrl || ''
+    }
+
+    switch (workflowType) {
+      case 'chat':
+        return workflows.chat || this.config.webhookUrl || ''
+      case 'document-upload':
+        return workflows.documentUpload || ''
+      case 'knowledge-search':
+        return workflows.knowledgeSearch || ''
+      case 'qa-generation':
+        return workflows.qaGeneration || ''
+      case 'project-summary':
+        return workflows.projectSummary || ''
+      case 'org-summary':
+        return workflows.orgSummary || ''
+      default:
+        return this.config.webhookUrl || ''
+    }
+  }
+
+  /**
+   * 调用文档上传工作流
+   */
+  async uploadDocument(file: File, metadata: any): Promise<AIResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('metadata', JSON.stringify(metadata))
+    
+    const webhookUrl = this.getN8nWebhookUrl('document-upload')
+    if (!webhookUrl) {
+      throw new Error('文档上传工作流URL未配置')
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        body: formData,
+        signal: AbortSignal.timeout(this.config.timeout || 60000) // 文档上传需要更长时间
+      })
+
+      if (!response.ok) {
+        throw new Error(`文档上传失败: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return this.parseN8nResponse(data)
+    } catch (error) {
+      console.error('文档上传工作流调用异常:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 调用知识库搜索工作流
+   */
+  async searchKnowledge(query: string, filters?: any): Promise<AIResponse> {
+    const searchRequest = {
+      query,
+      filters: filters || {},
+      timestamp: new Date().toISOString()
+    }
+
+    const webhookUrl = this.getN8nWebhookUrl('knowledge-search')
+    if (!webhookUrl) {
+      throw new Error('知识库搜索工作流URL未配置')
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(searchRequest),
+        signal: AbortSignal.timeout(this.config.timeout || 15000)
+      })
+
+      if (!response.ok) {
+        throw new Error(`知识库搜索失败: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return this.parseN8nResponse(data)
+    } catch (error) {
+      console.error('知识库搜索工作流调用异常:', error)
+      throw error
     }
   }
 }

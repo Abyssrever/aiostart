@@ -248,7 +248,7 @@ async function testConnection() {
       .eq('table_schema', 'public')
       .eq('table_name', 'okrs')
     
-    let okrsExists = !okrsError && okrsTable && okrsTable.length > 0
+    const okrsExists = !okrsError && okrsTable && okrsTable.length > 0
     console.log('okrs表存在:', okrsExists)
     
     // 如果okrs表存在，获取表结构
@@ -274,7 +274,7 @@ async function testConnection() {
       .eq('table_schema', 'public')
       .eq('table_name', 'key_results')
     
-    let keyResultsExists = !krError && krTable && krTable.length > 0
+    const keyResultsExists = !krError && krTable && krTable.length > 0
     console.log('key_results表存在:', keyResultsExists)
     
     // 获取所有用户表

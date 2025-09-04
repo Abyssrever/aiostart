@@ -21,19 +21,14 @@ interface Message {
 interface AIChatProps {
   sessionType?: 'okr_planning' | 'study_help' | 'general'
   onOKRSuggestion?: (suggestion: any) => void
+  projectId?: string
+  organizationId?: string
 }
 
-export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIChatProps) {
+export default function AIChat({ sessionType = 'general', onOKRSuggestion, projectId, organizationId }: AIChatProps) {
   const { user } = useAuth()
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: `你好 ${user?.name || '同学'}！我是你的AI学习伙伴 🤖\n\n我可以帮助你：\n• 制定和优化OKR目标\n• 分析学习进度和提供建议\n• 推荐学习资源和解答疑问\n• 生成个性化学习计划\n\n有什么我可以帮助你的吗？`,
-      timestamp: new Date().toLocaleTimeString(),
-      type: 'text'
-    }
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true)
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -42,25 +37,112 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
+  // 加载聊天历史
+  const loadChatHistory = async () => {
+    if (!user?.id) return
+
+    try {
+      const params = new URLSearchParams({
+        userId: user.id
+      })
+      if (projectId) params.append('projectId', projectId)
+      if (organizationId) params.append('organizationId', organizationId)
+      
+      const response = await fetch(`/api/chat/history?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.history) {
+          // 转换数据格式
+          const historyMessages: Message[] = data.history.map((record: any, index: number) => [
+            // 用户消息
+            {
+              id: `user-${record.id}-${index}`,
+              role: 'user' as const,
+              content: record.content,
+              timestamp: new Date(record.created_at).toLocaleTimeString(),
+              type: 'text' as const
+            },
+            // AI回复
+            record.ai_content ? {
+              id: `ai-${record.id}-${index}`,
+              role: 'assistant' as const,
+              content: record.ai_content,
+              timestamp: new Date(record.created_at).toLocaleTimeString(),
+              type: 'text' as const
+            } : null
+          ]).flat().filter(Boolean)
+
+          // 如果有历史记录，使用历史记录；否则显示欢迎消息
+          if (historyMessages.length > 0) {
+            setMessages(historyMessages)
+          } else {
+            setMessages([{
+              id: '1',
+              role: 'assistant',
+              content: `你好 ${user?.name || '同学'}！我是你的AI学习伙伴 🤖\n\n我可以帮助你：\n• 制定和优化OKR目标\n• 分析学习进度和提供建议\n• 推荐学习资源和解答疑问\n• 生成个性化学习计划\n\n有什么我可以帮助你的吗？`,
+              timestamp: new Date().toLocaleTimeString(),
+              type: 'text'
+            }])
+          }
+        }
+      }
+    } catch (error) {
+      console.error('加载聊天历史失败:', error)
+      // 显示默认欢迎消息
+      setMessages([{
+        id: '1',
+        role: 'assistant',
+        content: `你好 ${user?.name || '同学'}！我是你的AI学习伙伴 🤖\n\n我可以帮助你：\n• 制定和优化OKR目标\n• 分析学习进度和提供建议\n• 推荐学习资源和解答疑问\n• 生成个性化学习计划\n\n有什么我可以帮助你的吗？`,
+        timestamp: new Date().toLocaleTimeString(),
+        type: 'text'
+      }])
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  // 初始化时加载聊天历史
+  useEffect(() => {
+    if (user?.id) {
+      loadChatHistory()
+    }
+  }, [user?.id])
+
   useEffect(() => {
     scrollToBottom()
   }, [messages])
 
   const callAIAPI = async (userMessage: string): Promise<Message> => {
     try {
-      const response = await fetch('/api/ai-chat', {
+      const response = await fetch('/api/chat/enhanced', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json' 
         },
         body: JSON.stringify({
-          message: userMessage,
+          chatInput: userMessage,
+          user_id: user?.id,
+          project_id: projectId,
+          organization_id: organizationId,
+          sessionId: `session_${Date.now()}`,
           sessionType,
           conversationHistory: messages.slice(1).map(msg => ({
             role: msg.role === 'user' ? 'user' : 'assistant',
             content: msg.content,
             timestamp: msg.timestamp
-          }))
+          })),
+          userProfile: {
+            name: user?.name,
+            role: (user as any)?.role_type,
+            grade: user?.grade,
+            major: user?.major
+          }
         })
       })
 
@@ -70,12 +152,26 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
         throw new Error(data.error || 'AI服务调用失败')
       }
 
+      // 处理增强版聊天响应
+      const content = data.content || 'AI 回复为空'
+      
+      // 如果有知识库上下文，在消息后添加提示
+      let enhancedContent = content
+      if (data.knowledgeContext?.hasResults) {
+        enhancedContent += `\n\n💡 *基于 ${data.knowledgeContext.resultsCount} 条知识库内容为您回答*`
+      }
+      
+      // 如果有智能建议，添加到消息中
+      if (data.suggestions && data.suggestions.length > 0) {
+        enhancedContent += `\n\n📋 **智能建议：**\n${data.suggestions.map((s: string) => `• ${s}`).join('\n')}`
+      }
+
       return {
-        id: Date.now().toString(),
+        id: data.conversationId || Date.now().toString(),
         role: 'assistant',
-        content: data.content,
+        content: enhancedContent,
         timestamp: new Date().toLocaleTimeString(),
-        type: 'text'
+        type: data.okrResult ? 'okr_suggestion' : 'text'
       }
     } catch (error) {
       console.error('AI API调用失败:', error)
@@ -164,8 +260,16 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
       <CardContent className="flex-1 flex flex-col p-0">
         {/* 消息列表 */}
         <div className="flex-1 px-4 pb-4 overflow-y-auto max-h-96">
-          <div className="space-y-4">
-            {messages.map((message) => (
+          {isLoadingHistory ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                <span className="text-sm text-gray-600">加载对话历史...</span>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex items-start space-x-3 ${
@@ -244,7 +348,8 @@ export default function AIChat({ sessionType = 'general', onOKRSuggestion }: AIC
             )}
             
             <div ref={messagesEndRef} />
-          </div>
+            </div>
+          )}
         </div>
         
         {/* 输入区域 */}

@@ -663,6 +663,26 @@ export default function OKRManagementReal({ userRole = 'student', onDataChange }
                                 />
                               </div>
                             </div>
+                            
+                            {/* 文件上传区域 */}
+                            <div>
+                              <Label>相关文档</Label>
+                              <FileUpload
+                                category="okr"
+                                keyResultId={selectedOKR?.id}
+                                maxSize={10}
+                                multiple={true}
+                                onUploadComplete={(files) => {
+                                  console.log('关键结果文件上传完成:', files)
+                                  success('文件上传成功')
+                                }}
+                                onUploadError={(error) => {
+                                  showError(`文件上传失败: ${error}`)
+                                }}
+                                className="mt-2"
+                              />
+                            </div>
+                            
                             {keyResultValidationError && (
                               <div className="text-red-600 text-sm font-medium mb-2">
                                 {keyResultValidationError}

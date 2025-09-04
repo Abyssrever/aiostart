@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 
 // 获取存储桶名称的辅助函数
 function getStorageBucket(category: string): string {
@@ -50,10 +49,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `文件大小不能超过${maxSizeMB}MB` }, { status: 400 })
     }
 
-    // 检查文件类型
+    // 检查文件类型（放宽限制，主要在Supabase Storage层面控制）
     const allowedTypes = [
       'text/plain',
       'text/markdown',
+      'text/csv',
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -65,15 +65,19 @@ export async function POST(request: NextRequest) {
       'image/png',
       'image/gif',
       'image/webp',
-      'application/json'
+      'application/json',
+      'application/zip',
+      'application/x-zip-compressed'
     ]
 
-    if (category === 'assignment') {
-      allowedTypes.push('application/zip', 'application/x-zip-compressed')
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: '不支持的文件类型' }, { status: 400 })
+    // 严格的文件类型验证
+    const isAllowed = allowedTypes.includes(file.type)
+    
+    if (!isAllowed) {
+      console.log(`文件类型不支持: ${file.type}`)
+      return NextResponse.json({ 
+        error: `不支持的文件类型: ${file.type}。允许的类型: PDF, Word, Excel, PowerPoint, 图片, 文本文件` 
+      }, { status: 400 })
     }
 
     // 获取存储桶
@@ -96,8 +100,13 @@ export async function POST(request: NextRequest) {
       })
 
     if (uploadError) {
-      console.error('Supabase Storage 上传错误:', uploadError)
-      return NextResponse.json({ error: `文件上传失败: ${uploadError.message}` }, { status: 500 })
+      console.error('文件上传失败:', {
+        bucket,
+        fileSize: file.size,
+        fileType: file.type,
+        error: uploadError.message
+      })
+      return NextResponse.json({ error: '文件上传失败，请稍后重试' }, { status: 500 })
     }
 
     // 获取公共URL (如果需要)
@@ -132,10 +141,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (dbError) {
-      console.error('数据库插入错误:', dbError)
+      console.error('文件信息保存失败:', {
+        fileName: file.name,
+        fileSize: file.size,
+        errorCode: dbError.code
+      })
       // 如果数据库插入失败，删除已上传的文件
       await supabase.storage.from(bucket).remove([storagePath])
-      return NextResponse.json({ error: '文件信息保存失败' }, { status: 500 })
+      return NextResponse.json({ error: '文件信息保存失败，请稍后重试' }, { status: 500 })
     }
 
     // 返回文件信息

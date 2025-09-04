@@ -5,7 +5,7 @@ export const mockAuthUsers = [
   {
     id: '1',
     username: 'student',
-    password: 'student', // 实际项目中应该加密存储
+    password: '***', // 密码已脱敏处理
     name: '张三',
     role: 'student' as const,
     avatar: '/avatars/student.jpg'
@@ -13,7 +13,7 @@ export const mockAuthUsers = [
   {
     id: '2', 
     username: 'teacher',
-    password: 'teacher',
+    password: '***', // 密码已脱敏处理
     name: '李老师',
     role: 'teacher' as const,
     avatar: '/avatars/teacher.jpg'
@@ -21,7 +21,7 @@ export const mockAuthUsers = [
   {
     id: '3',
     username: 'admin', 
-    password: 'admin',
+    password: '***', // 密码已脱敏处理
     name: '王管理员',
     role: 'admin' as const,
     avatar: '/avatars/admin.jpg'

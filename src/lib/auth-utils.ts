@@ -19,14 +19,20 @@ export function isValidEmail(email: string): boolean {
  * 验证密码强度
  */
 export function isValidPassword(password: string): { valid: boolean; message?: string } {
-  if (password.length < 6) {
-    return { valid: false, message: '密码长度至少为6位' }
+  if (password.length < 8) {
+    return { valid: false, message: '密码长度至少需要8位' }
   }
   
-  // 可以添加更多密码强度验证规则
-  // if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-  //   return { valid: false, message: '密码必须包含大小写字母和数字' }
-  // }
+  // 密码必须包含大小写字母、数字和特殊字符
+  if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(password)) {
+    return { valid: false, message: '密码必须包含大小写字母、数字和特殊字符(@$!%*?&)' }
+  }
+  
+  // 检查常见弱密码
+  const weakPasswords = ['12345678', 'password', 'Password123!', 'admin123@', 'qwerty123!']
+  if (weakPasswords.some(weak => password.toLowerCase().includes(weak.toLowerCase()))) {
+    return { valid: false, message: '密码过于简单，请使用更安全的密码' }
+  }
   
   return { valid: true }
 }

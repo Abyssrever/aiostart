@@ -29,7 +29,9 @@
       "Bash(npm run test-db:*)",
       "Bash(curl:*)",
       "Bash(npm run lint)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(del allkey.txt)",
+      "Bash(rg:*)"
     ],
     "deny": [],
     "ask": []
